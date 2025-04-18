@@ -1,0 +1,404 @@
+<!-- START OF FILE app.html -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign 2 Speak - App</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/17.0.2/umd/react.development.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/17.0.2/umd/react-dom.development.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/6.26.0/babel.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f4f7f6;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        body.dark {
+            background-color: #1a202c;
+            color: #e2e8f0;
+        }
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #e0e0e0; border-radius: 10px; }
+        .dark .custom-scrollbar::-webkit-scrollbar-track { background: #2d3748; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #4a5568; }
+        .prediction-text { font-size: 1.5rem; font-weight: bold; min-height: 2.5rem; text-align: center; }
+        .speech-to-asl-text-display { font-size: 1.1rem; min-height: 2.5rem; text-align: left; line-height: 1.4; }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #6366f1; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
+        .dark .loader { border: 4px solid #4a5568; border-top: 4px solid #818cf8; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        /* No pose download link style needed */
+    </style>
+</head>
+<body>
+    <div id="root" class="container mx-auto px-4 py-8"></div>
+
+    {% raw %} <!-- START Jinja Raw Block -->
+    <script type="text/babel">
+
+        const { useState, useEffect, useRef, useCallback } = React;
+
+        // --- SettingsGear Component ---
+        function SettingsGear({ isDarkMode, toggleDarkMode }) {
+            const [isOpen, setIsOpen] = useState(false);
+            const handleLogout = async (e) => {
+                 e.preventDefault();
+                 try {
+                     const response = await fetch('/api/logout');
+                     if (response.ok || response.redirected) {
+                         window.location.href = '/signin';
+                     } else {
+                         console.error("Logout failed:", response.statusText);
+                         alert("Logout failed. Please try again.");
+                     }
+                 } catch (error) {
+                     console.error("Error during logout:", error);
+                     alert("An error occurred during logout.");
+                 }
+                 setIsOpen(false);
+            };
+
+            return (
+                <div className="relative">
+                    <button
+                        onClick={() => setIsOpen(!isOpen)}
+                        className="text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 focus:outline-none"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826 3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                    </button>
+                    {isOpen && (
+                        <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-700 rounded-lg shadow-lg py-2 z-50">
+                            <div onClick={() => { toggleDarkMode(); setIsOpen(false); }} className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer flex items-center text-gray-800 dark:text-gray-200">
+                                <span className="mr-2">{isDarkMode ? '☀️' : '🌙'}</span> {isDarkMode ? 'Light Mode' : 'Dark Mode'}
+                            </div>
+                            <a href="/api/logout" onClick={handleLogout} className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200"> <span className="mr-2">🚪</span> Logout </a>
+                             <a href="/" className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200"> <span className="mr-2">🏠</span> Home Page </a>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        // --- MicrophoneButton Component ---
+        function MicrophoneButton({ isRecording, onStart, onStop, disabled }) {
+             return (
+                 <button
+                     onClick={isRecording ? onStop : onStart}
+                     disabled={disabled}
+                     className={`text-gray-600 dark:text-gray-300 focus:outline-none relative p-1 rounded-full transition-colors duration-200 ${isRecording ? 'bg-red-200 dark:bg-red-800 animate-pulse' : 'hover:text-gray-800 dark:hover:text-gray-100'} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                     title={disabled ? "Processing..." : (isRecording ? "Stop Recording" : "Start Recording")}
+                 >
+                     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2a3 3 0 00-3 3v7a3 3 0 006 0V5a3 3 0 00-3-3z" />
+                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 10v2a7 7 0 01-14 0v-2" />
+                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19v3" />
+                     </svg>
+                     {isRecording && (
+                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75 top-0 left-0"></span>
+                     )}
+                 </button>
+             );
+        }
+
+        // --- Main Application Component ---
+        function Sign2SpeakApp() {
+            const [isDarkMode, setIsDarkMode] = useState(false);
+            // Sign-to-Text State
+            const [predictionResult, setPredictionResult] = useState("");
+            const [isPredicting, setIsPredicting] = useState(false);
+            const [isStreamPaused, setIsStreamPaused] = useState(false);
+            const webcamVideoRef = useRef(null);
+            const canvasRef = useRef(document.createElement('canvas'));
+            const intervalRef = useRef(null);
+
+            // Speech-to-ASL GIF Generation State
+            const [isRecording, setIsRecording] = useState(false);
+            const [processingStatus, setProcessingStatus] = useState("Idle");
+            const [transcriptionResult, setTranscriptionResult] = useState("");
+            // const [glossResult, setGlossResult] = useState(""); // Not needed as state
+            const [poseGifUrl, setPoseGifUrl] = useState(null); // Only need GIF URL now
+            const [processingError, setProcessingError] = useState(null);
+            const mediaRecorderRef = useRef(null);
+            const audioChunksRef = useRef([]);
+
+            // Toggle dark mode
+            const toggleDarkMode = () => { const newMode = !isDarkMode; setIsDarkMode(newMode); localStorage.setItem('darkMode', JSON.stringify(newMode)); document.body.classList.toggle('dark', newMode); };
+
+            // Initial dark mode setup
+            useEffect(() => { const savedDarkMode = localStorage.getItem('darkMode'); let initialDarkMode = false; if (savedDarkMode !== null) { initialDarkMode = savedDarkMode === 'true'; } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) { initialDarkMode = true; } setIsDarkMode(initialDarkMode); document.body.classList.toggle('dark', initialDarkMode); }, []);
+
+            // --- Sign-to-Text Logic ---
+            const captureAndPredict = useCallback(async () => { if (isStreamPaused || isPredicting || !webcamVideoRef.current || !webcamVideoRef.current.videoWidth || webcamVideoRef.current.paused || webcamVideoRef.current.ended) return; setIsPredicting(true); let currentToken = null; try { const videoElement = webcamVideoRef.current; const canvas = canvasRef.current; const context = canvas.getContext('2d'); canvas.width = videoElement.videoWidth; canvas.height = videoElement.videoHeight; context.drawImage(videoElement, 0, 0, canvas.width, canvas.height); const imageData = canvas.toDataURL('image/png'); const uploadResponse = await fetch('/upload_frame', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: imageData }) }); if (!uploadResponse.ok) throw new Error(`Upload failed: ${uploadResponse.statusText}`); const uploadData = await uploadResponse.json(); if (uploadData.status !== 'success' || !uploadData.token) throw new Error(`Upload error: ${uploadData.message || 'No token'}`); currentToken = uploadData.token; const predictResponse = await fetch('/predict', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: currentToken }) }); if (!predictResponse.ok) throw new Error(`Prediction failed: ${predictResponse.statusText}`); const predictionData = await predictResponse.json(); if (predictionData.status === 'success') setPredictionResult(predictionData.result || ""); else { console.error('Prediction API error:', predictionData.message); setPredictionResult(""); } } catch (error) { console.error('Error in capture/predict cycle:', error); setPredictionResult("Error"); } finally { setIsPredicting(false); } }, [isPredicting, isStreamPaused]);
+            const startPredictionInterval = useCallback(() => { stopPredictionInterval(); if (!isStreamPaused && webcamVideoRef.current && webcamVideoRef.current.srcObject) { intervalRef.current = setInterval(captureAndPredict, 200); console.log("Prediction interval started."); } else { console.log("Prediction interval not started."); } }, [isStreamPaused, captureAndPredict]);
+            const stopPredictionInterval = () => { if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; console.log("Prediction interval stopped."); } };
+            const toggleStreamPause = () => { setIsStreamPaused(prevPaused => { const newPausedState = !prevPaused; if (newPausedState) stopPredictionInterval(); else { if (webcamVideoRef.current && webcamVideoRef.current.srcObject && webcamVideoRef.current.readyState >= 3) startPredictionInterval(); else console.log("Resume attempt failed: Webcam not ready."); } console.log(`Stream capture ${newPausedState ? 'paused' : 'resumed'}.`); return newPausedState; }); };
+            useEffect(() => { let stream = null; let isMounted = true; const setupWebcam = async () => { try { stream = await navigator.mediaDevices.getUserMedia({ video: true }); if (isMounted && webcamVideoRef.current) { webcamVideoRef.current.srcObject = stream; webcamVideoRef.current.onloadedmetadata = () => { if (isMounted) { console.log("Webcam started."); if (!isStreamPaused) startPredictionInterval(); } }; webcamVideoRef.current.onerror = (e) => { console.error('Webcam error:', e); if (isMounted) setPredictionResult("Webcam Error"); }; if (stream.getVideoTracks().length > 0) stream.getVideoTracks()[0].onended = () => { console.log("Webcam track ended."); if (isMounted) setPredictionResult("Webcam Disconnected"); stopPredictionInterval(); }; } } catch (err) { console.error('Webcam access error:', err); if (isMounted) setPredictionResult("Webcam Error"); } }; setupWebcam(); return () => { isMounted = false; stopPredictionInterval(); if (stream) stream.getTracks().forEach(track => track.stop()); if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') mediaRecorderRef.current.stop(); }; }, [startPredictionInterval, isStreamPaused]);
+
+            // --- Speech-to-ASL GIF Generation Logic ---
+
+            const handleSseEvent = (eventData) => {
+                console.log("SSE Event:", eventData);
+                const step = eventData.step;
+                const message = eventData.message;
+                const error = eventData.error;
+
+                if (step === "info" && message && message !== "Processing finished.") {
+                   setProcessingStatus(message);
+                } else if (step === "transcription") {
+                   setProcessingStatus("Processing Transcription...");
+                   setTranscriptionResult(eventData.transcription || "No speech detected.");
+                // } else if (step === "gloss") { // Gloss step might be removed or less relevant now
+                   // setProcessingStatus("Processing Gloss...");
+                }
+                // *** SUCCESS CASE: GIF is the final output ***
+                else if (step === "pose_gif") {
+                   setProcessingStatus("Complete"); // Final success status
+                   // Use URL from backend event, add cache buster just in case
+                   setPoseGifUrl((eventData.url || `/static/videos/${eventData.gif_filename}`) + `?t=${new Date().getTime()}`);
+                } else if (step === "warning" && message) {
+                    console.warn("Processing Warning:", message);
+                    // Optionally display warning to user by appending to error state or similar
+                    setProcessingError(prev => prev ? `${prev}\nWarning: ${message}` : `Warning: ${message}`);
+                 } else if (step === "error") {
+                   const fullErrorMessage = error + (eventData.details ? `: ${eventData.details}` : '');
+                   console.error("Processing Error:", fullErrorMessage);
+                   setProcessingStatus("Error");
+                   setProcessingError(eventData.error || 'An unknown error occurred.');
+                   setPoseGifUrl(null); // Clear GIF on error
+                } else if (step === "info" && message === "Processing finished.") {
+                    console.log("Ignoring final 'Processing finished.' info message.");
+                }
+            };
+
+            const startRecording = async () => {
+                setProcessingStatus("Initializing...");
+                setTranscriptionResult("");
+                // setGlossResult(""); // Not needed as state
+                setPoseGifUrl(null);
+                setProcessingError(null);
+                setIsRecording(false);
+                let stream = null;
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    const options = { mimeType: 'audio/webm' };
+                    if (!MediaRecorder.isTypeSupported(options.mimeType)) { options.mimeType = ''; }
+                    mediaRecorderRef.current = new MediaRecorder(stream, options);
+                    audioChunksRef.current = [];
+                    mediaRecorderRef.current.ondataavailable = (event) => { if (event.data.size > 0) audioChunksRef.current.push(event.data); };
+
+                    mediaRecorderRef.current.onstop = async () => {
+                        console.log("Recording stopped.");
+                        const blobType = mediaRecorderRef.current.mimeType || 'audio/webm';
+                        const audioBlob = new Blob(audioChunksRef.current, { type: blobType });
+                        console.log("Blob size:", audioBlob.size, "Type:", blobType);
+                        if(stream) stream.getTracks().forEach(track => track.stop()); // Stop tracks
+
+                        if (audioBlob.size === 0) {
+                           console.warn("Empty audio."); setProcessingStatus("Error"); setProcessingError("Recording failed (empty audio)."); setIsRecording(false); return;
+                        }
+
+                        setProcessingStatus("Uploading...");
+                        const formData = new FormData();
+                        // --- CORRECTED Line 168 ---
+                        // Determine file extension more safely
+                        let extension = 'webm'; // Default
+                        if (blobType) {
+                            const typeParts = blobType.split('/');
+                            if (typeParts.length > 1) {
+                                const subtypeParts = typeParts[1].split(';'); // Handle potential parameters
+                                if (subtypeParts.length > 0 && subtypeParts[0]) {
+                                    extension = subtypeParts[0];
+                                }
+                            }
+                        }
+                        const filename = `recording.${extension}`;
+                        // --- END CORRECTION ---
+                        formData.append('audio', audioBlob, filename);
+
+                        try {
+                            const response = await fetch('/process', { method: 'POST', body: formData });
+                            if (!response.ok || !response.body) { const errorText = await response.text().catch(() => `HTTP Error: ${response.status} ${response.statusText}`); throw new Error(`Server error: ${errorText}`); }
+                            const reader = response.body.getReader(); const decoder = new TextDecoder("utf-8"); let buffer = "";
+
+                            while (true) {
+                                const { done, value } = await reader.read();
+                                if (done) {
+                                     console.log("SSE stream finished.");
+                                     setProcessingStatus(prevStatus => {
+                                         console.log("Stream ended check. Status:", prevStatus);
+                                         if (prevStatus !== "Complete" && prevStatus !== "Error") { console.warn("Stream ended unexpectedly. Resetting to Idle."); setPoseGifUrl(null); return "Idle"; }
+                                         return prevStatus;
+                                     }); break;
+                                }
+                                buffer += decoder.decode(value, { stream: true }); const parts = buffer.split("\n\n"); buffer = parts.pop();
+                                for (const part of parts) { if (part.startsWith("data: ")) { const jsonString = part.substring(6).trim(); if (jsonString) { try { const eventData = JSON.parse(jsonString); handleSseEvent(eventData); } catch (e) { console.error("Error parsing SSE:", e, "String:", jsonString); } } } }
+                            } // end while
+                        } catch (err) {
+                            console.error('SSE Error:', err); setProcessingStatus("Error"); setProcessingError(`Connection Error: ${err.message}`); setPoseGifUrl(null);
+                        } finally {
+                           if(stream && stream.active) stream.getTracks().forEach(track => track.stop());
+                           console.log("Processing attempt finished.");
+                        }
+                    }; // end onstop
+
+                    mediaRecorderRef.current.start();
+                    setIsRecording(true); setProcessingStatus("Recording...");
+                } catch (err) {
+                    console.error('Mic access error:', err); setProcessingStatus("Error"); setProcessingError(`Mic Error: ${err.message}`); setIsRecording(false);
+                    if(stream) stream.getTracks().forEach(track => track.stop());
+                }
+            }; // end startRecording
+
+            const stopRecording = () => {
+                if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+                    console.log("Stop clicked."); setIsRecording(false);
+                    try { mediaRecorderRef.current.stop(); }
+                    catch (e) {
+                        console.error("Error stopping recorder:", e);
+                        setProcessingStatus("Error");
+                        setProcessingError("Error stopping recording.");
+                        // Explicit checks instead of optional chaining
+                        if (mediaRecorderRef.current && mediaRecorderRef.current.stream && mediaRecorderRef.current.stream.active) {
+                           mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+                        }
+                    }
+                } else {
+                    console.warn("Stop called but not recording.");
+                    setIsRecording(false);
+                }
+            };
+
+
+            // --- Component Rendering ---
+            const topSections = [
+                { id: 'sign-to-text-video', title: 'Sign to Text', content: ( <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md h-full flex flex-col"> <div className="flex-grow relative mb-4"> <video ref={webcamVideoRef} autoPlay muted playsInline className="w-full h-full object-cover rounded-lg bg-gray-900" style={{aspectRatio: '16/9'}} id="webcamVideo" /> <div className={`absolute top-4 left-4 text-white px-3 py-1 rounded-full text-sm font-medium pointer-events-none shadow ${isStreamPaused ? 'bg-yellow-500' : (['Error', 'Webcam Error', 'Webcam Disconnected'].includes(predictionResult) ? 'bg-red-600' : 'bg-green-500 animate-pulse')}`}> {isStreamPaused ? 'Paused' : (['Error', 'Webcam Error', 'Webcam Disconnected'].includes(predictionResult) ? 'Error' : 'Live')} </div> <button onClick={toggleStreamPause} disabled={!webcamVideoRef.current || !webcamVideoRef.current.srcObject || ['Error', 'Webcam Error', 'Webcam Disconnected'].includes(predictionResult)} className="absolute top-4 right-4 bg-gray-700 bg-opacity-60 text-white p-2 rounded-full hover:bg-opacity-80 focus:outline-none z-10 transition-opacity duration-200 disabled:opacity-50 disabled:cursor-not-allowed" title={isStreamPaused ? "Resume Capture" : "Pause Capture"}> {isStreamPaused ? ( <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg> ) : ( <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clipRule="evenodd" /></svg> )} </button> </div> <div className="flex-shrink-0 mt-auto bg-green-100 dark:bg-gray-700 p-3 rounded-lg shadow-inner"> <p className="text-green-800 dark:text-green-200 prediction-text"> {predictionResult || "..."} </p> </div> </div> ) },
+                {
+                    id: 'speech-to-asl-gif',
+                    title: 'Speech to ASL GIF',
+                    content: (
+                        <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md h-full flex flex-col">
+                             {/* Output Area - REVISED for GIF */}
+                             <div className="flex-grow relative flex items-center justify-center bg-gray-200 dark:bg-gray-700 rounded-lg mb-4 min-h-[200px]">
+                                {processingStatus === "Complete" && poseGifUrl ? (
+                                    // Display GIF preview on success
+                                    <div className="text-center p-4">
+                                        <img src={poseGifUrl} alt="Generated ASL Pose GIF" className="max-w-full max-h-full object-contain rounded-lg mx-auto" />
+                                    </div>
+                                ) : ["Uploading...", "Transcribing...", "Processing Transcription...", "Loading pose file(s) for:", "Loading poses for:", "Concatenating loaded poses...", "Generating GIF preview..."].some(s => processingStatus.startsWith(s)) ? ( // Improved loader check
+                                    // Display loader during processing
+                                    <div className="text-center">
+                                        <div className="loader"></div>
+                                        <p className="text-gray-600 dark:text-gray-400 mt-2">{processingStatus}...</p>
+                                    </div>
+                                ) : processingStatus === "Error" && processingError ? (
+                                     // Display error message
+                                      <div className="text-center p-4 text-red-600 dark:text-red-400">
+                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-red-500 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"> <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /> </svg>
+                                        <p className="font-semibold">Error:</p> <p className="text-sm break-words">{processingError}</p>
+                                    </div>
+                                ) : (
+                                    // Initial state prompt
+                                    <div className="text-center p-4">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-24 w-24 text-gray-400 dark:text-gray-500 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l-1.586-1.586a2 2 0 00-2.828 0L6 14m6-6l.586-.586a2 2 0 012.828 0L18 10m-8 8h.01M5 21h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2z" /> {/* Image/GIF icon */}
+                                        </svg>
+                                        <p className="mt-4 text-gray-500 dark:text-gray-400 text-sm">Record audio to generate ASL GIF</p>
+                                     </div>
+                                )}
+                            </div>
+                            {/* Control Area */}
+                            <div className="flex-shrink-0 mt-auto bg-purple-100 dark:bg-gray-700 p-3 rounded-lg shadow-inner">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex-grow mr-3 overflow-auto max-h-20 custom-scrollbar">
+                                        <p className="text-purple-800 dark:text-purple-200 speech-to-asl-text-display" title={transcriptionResult || processingStatus}>
+                                            {processingError && processingStatus === "Error" ? ( <span className="font-semibold text-red-600 dark:text-red-400">Error: {processingError}</span> )
+                                            : isRecording ? ( <span className="italic text-red-600 dark:text-red-400">Recording...</span> )
+                                            : processingStatus !== "Idle" && processingStatus !== "Complete" && processingStatus !== "Error" ? ( <span className="italic text-gray-600 dark:text-gray-400">{processingStatus}...</span> )
+                                            : transcriptionResult && (processingStatus === "Complete" || processingStatus === "Error") ? ( <span>{transcriptionResult}</span> )
+                                            : ( <span className="italic text-gray-500 dark:text-gray-400">Press mic to start recording</span> )}
+                                        </p>
+                                         {/* Maybe display gloss if needed: glossResult && ... */}
+                                    </div>
+                                    <div className="flex-shrink-0">
+                                        <MicrophoneButton isRecording={isRecording} onStart={startRecording} onStop={stopRecording} disabled={!isRecording && !["Idle", "Complete", "Error"].includes(processingStatus)} />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )
+                }
+            ];
+
+             // --- Bottom Description Sections ---
+             const bottomSections = [
+                { id: 'sign-to-text-details', content: ( <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md"> <h2 className="text-2xl font-bold mb-4 text-indigo-700 dark:text-indigo-400">Sign to Text Translation</h2> <div className="space-y-4 text-gray-700 dark:text-gray-300"> <p> Utilizes your device's webcam to capture American Sign Language (ASL) gestures. Advanced computer vision models analyze hand shapes, movements, and facial expressions in real-time. Use the pause button (<svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 inline-block relative -top-0.5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clipRule="evenodd" /></svg>) on the video feed to temporarily stop translation. </p> <h3 className="text-xl font-semibold text-indigo-600 dark:text-indigo-400">Key Process:</h3> <ol className="list-decimal list-inside space-y-2"> <li>Real-time video frame capture (~5 FPS)</li> <li>Frame sent to server for landmark detection (MediaPipe)</li> <li>Landmark data normalization and feature extraction</li> <li>Machine learning model inference (TensorFlow/Keras)</li> <li>Output of recognized letter prediction displayed</li> </ol> <div className="bg-blue-100 dark:bg-blue-900 p-4 rounded-lg"> <h4 className="font-bold mb-2 text-blue-800 dark:text-blue-200">Current Status:</h4> <ul className="list-disc list-inside"> <li>Recognizes individual ASL alphabet letters.</li> <li>Requires good lighting and clear hand view.</li> <li>Translation happens frame-by-frame.</li> </ul> </div> </div> </div> ) },
+                {
+                    id: 'speech-to-asl-gif-details',
+                     content: (
+                        <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md">
+                            <h2 className="text-2xl font-bold mb-4 text-indigo-700 dark:text-indigo-400">Speech to ASL GIF Generation</h2>
+                            <div className="space-y-4 text-gray-700 dark:text-gray-300">
+                                <p>
+                                    Click the microphone icon (<svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 inline-block relative -top-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2a3 3 0 00-3 3v7a3 3 0 006 0V5a3 3 0 00-3-3z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 10v2a7 7 0 01-14 0v-2" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19v3" /></svg>) to record your speech. The audio is transcribed, and the system attempts to generate an animated GIF representing the ASL equivalent of the recognized words.
+                                </p>
+                                <h3 className="text-xl font-semibold text-indigo-600 dark:text-indigo-400">Process Overview:</h3>
+                                <ol className="list-decimal list-inside space-y-2">
+                                    <li>Microphone audio capture.</li>
+                                    <li>Audio sent to server upon stopping recording.</li>
+                                    <li>Speech-to-Text (STT) conversion using Faster-Whisper.</li>
+                                    <li>Loading corresponding `.pose` files for each transcribed word (converted to lowercase).</li>
+                                    <li>Concatenating the loaded pose files into a single sequence.</li>
+                                    <li>Generating an animated GIF preview from the concatenated pose data.</li>
+                                    <li>Streaming updates (Transcription, Status, GIF URL) back to the interface.</li>
+                                </ol>
+                                <div className="bg-yellow-100 dark:bg-yellow-900 p-4 rounded-lg">
+                                    <h4 className="font-bold mb-2 text-yellow-800 dark:text-yellow-200">Current Status & Limitations:</h4>
+                                    <ul className="list-disc list-inside">
+                                        <li>Speech is transcribed to text.</li>
+                                        <li>An animated GIF is generated based on the available `.pose` files for the transcribed words.</li>
+                                        <li>The generated GIF is displayed upon completion.</li>
+                                        <li><strong>Removed:</strong> MP4 video generation is not performed. Pose file download is not offered.</li>
+                                        <li><strong>Limitation:</strong> Will fail or produce an incomplete GIF if `.pose` files are missing for any transcribed words.</li>
+                                        <li><strong>Limitation:</strong> No actual Text-to-Gloss translation occurs; direct word-to-pose mapping is attempted.</li>
+                                        <li><strong>Dependency:</strong> Requires correctly named, lowercase `.pose` files (e.g., `hello.pose`, `world.pose`) for expected words to exist in the `files/static/asl/` directory on the server.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                     )
+                }
+             ];
+
+            // --- Main Render Structure ---
+            return (
+                <div className="relative">
+                    <div className="absolute top-0 right-0 m-4 z-20"> <SettingsGear isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} /> </div>
+                    <div className="container mx-auto">
+                        <h1 className="text-4xl md:text-5xl font-bold text-center text-indigo-700 dark:text-indigo-400 mb-8 pt-8 md:pt-4"> Sign 2 Speak Interface </h1>
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4"> {topSections.map((section) => ( <div key={section.id} className="min-h-[40vh] md:min-h-[50vh]"> {section.content} </div> ))} </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4"> {bottomSections.map((section) => ( <div key={section.id} className="custom-scrollbar"> {section.content} </div> ))} </div>
+                    </div>
+                </div>
+            );
+        } // End Sign2SpeakApp Component
+
+        ReactDOM.render(<Sign2SpeakApp />, document.getElementById('root'));
+
+    </script>
+    {% endraw %} <!-- END Jinja Raw Block -->
+
+</body>
+</html>
+<!-- END OF FILE app.html -->

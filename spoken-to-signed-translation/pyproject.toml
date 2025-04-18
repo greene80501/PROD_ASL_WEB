@@ -1,0 +1,63 @@
+[project]
+name = "spoken-to-signed"
+description = "Simple pipeline for spoken to signed translation"
+version = "0.0.3"
+authors = [
+    { name = "Amit Moryossef", email = "amitmoryossef@gmail.com" },
+    { name = "Mathias Müller", email = "mmueller@cl.uzh.ch" }
+]
+readme = "README.md"
+dependencies = [
+    "pose-format>=0.4.1",
+    "numpy",
+    "scipy", # Used for savgol filter
+    "simplemma>=1.0.0", # Used generally for "simple" text_to_gloss, and in download_lexicon
+    # Optional modules, used in different parts of the pipeline:
+    # "pose_anonymization @ git+https://github.com/sign-language-processing/pose-anonymization", # Used for anonymization
+    # "spacy", # used for "rules" and "spacylemma" text_to_gloss components
+    # "sentencepiece", # used for "nmt" text_to_gloss component
+    # "sockeye==3.1.10", # used for "nmt" text_to_gloss component
+    # "sign-language-datasets" # used for download_lexicon script
+    # "gcsfs", # When files are stored on Google Cloud Storage
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pylint"
+]
+
+[tool.yapf]
+based_on_style = "google"
+column_limit = 120
+
+[tool.setuptools]
+packages = [
+    "spoken_to_signed",
+    "spoken_to_signed.assets",
+    "spoken_to_signed.text_to_gloss",
+    "spoken_to_signed.gloss_to_pose",
+    "spoken_to_signed.gloss_to_pose.lookup",
+    "spoken_to_signed.pose_to_video",
+]
+include-package-data = true
+
+[tool.setuptools.package-data]
+spoken_to_signed = [
+    "*.pth",
+    "assets/*",
+]
+
+
+[tool.pytest.ini_options]
+addopts = "-v"
+testpaths = [
+    "spoken_to_signed",
+]
+
+[project.scripts]
+download_lexicon = "spoken_to_signed.download_lexicon:main"
+text_to_gloss = "spoken_to_signed.bin:text_to_gloss"
+#pose_to_video = "spoken_to_signed.bin:pose_to_video"
+text_to_gloss_to_pose = "spoken_to_signed.bin:text_to_gloss_to_pose"
+text_to_gloss_to_pose_to_video = "spoken_to_signed.bin:text_to_gloss_to_pose_to_video"
