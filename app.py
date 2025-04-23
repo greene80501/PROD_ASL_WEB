@@ -1,4 +1,4 @@
-# --- START OF FILE app.py 2 ---
+# --- START OF FILE app.py ---
 
 from flask import Flask, request, jsonify, render_template, redirect, url_for, session, Response, stream_with_context
 import base64
@@ -11,8 +11,11 @@ import datetime
 import uuid
 import traceback
 import tempfile
+import re # Import regular expressions for filename parsing
+import glob # Import glob for file pattern matching
 
 # --- Imports for Spoken-to-Signed Feature ---
+# ... (keep existing imports)
 import sys
 # import subprocess # No longer needed as pose_to_video is removed
 import json
@@ -104,11 +107,11 @@ BASE_DIR = os.path.dirname(__file__)
 MODEL_DIR = os.path.join(BASE_DIR, "files", "model")
 MODEL_NAME = "asl_model.keras"
 model_path = os.path.join(MODEL_DIR, MODEL_NAME)
-TMP_DIR = os.path.join(BASE_DIR, "files", "api", "tmp") # For sign-to-text frames
+TMP_DIR = os.path.join(BASE_DIR, "files", "api", "tmp") # Base directory for sign-to-text frames
 TEMP_DIR_AUDIO = os.path.join(BASE_DIR, "temp") # Used for audio and temp pose
 
 # --- Create Directories ---
-os.makedirs(TMP_DIR, exist_ok=True)
+os.makedirs(TMP_DIR, exist_ok=True) # Ensure base temp directory exists
 os.makedirs(TEMP_DIR_AUDIO, exist_ok=True)
 # Ensure 'videos' subdirectory exists in static folder (for GIF output)
 VIDEOS_DIR = os.path.join(STATIC_FOLDER_PATH, "videos")
@@ -193,6 +196,7 @@ def api_signup():
     data = request.get_json(); email = data.get('email'); password = data.get('password'); full_name = data.get('fullName')
     if not all([email, password, full_name]): return jsonify({"status": "error", "message": "Missing email, password, or full name."}), 400
     if len(password) < 8: return jsonify({"status": "error", "message": "Password must be at least 8 characters."}), 400
+    # Use case-insensitive query for email check
     if User.query.filter(User.email.ilike(email)).first(): return jsonify({"status": "error", "message": "Email address already registered."}), 409
     try: new_user = User(email=email, full_name=full_name); new_user.set_password(password); db.session.add(new_user); db.session.commit(); print(f"User registered successfully: {email}"); return jsonify({"status": "success", "message": "Account created successfully. Please sign in."}), 201
     except Exception as e: db.session.rollback(); print(f"Error during signup: {e}"); traceback.print_exc(); return jsonify({"status": "error", "message": "Registration failed due to a server error."}), 500
@@ -204,6 +208,7 @@ def api_signin():
     if not request.is_json: return jsonify({"status": "error", "message": "Request must be JSON."}), 415
     data = request.get_json(); email = data.get('email'); password = data.get('password'); remember = data.get('rememberMe', False)
     if not all([email, password]): return jsonify({"status": "error", "message": "Missing email or password."}), 400
+    # Use case-insensitive query for email lookup
     user = User.query.filter(User.email.ilike(email)).first()
     if user and user.check_password(password): login_user(user, remember=remember); print(f"User logged in successfully: {email}"); return jsonify({"status": "success", "message": "Login successful."})
     else: print(f"Login failed for email: {email}"); return jsonify({"status": "error", "message": "Invalid email or password."}), 401
@@ -212,7 +217,15 @@ def api_signin():
 @login_required # Ensures only logged-in users can trigger logout
 def api_logout():
     """Handles user logout via API."""
-    print(f"User logging out: {current_user.email}"); logout_user(); return redirect(url_for('signin_page'))
+    if current_user.is_authenticated: # Check is slightly redundant due to @login_required but good practice
+        print(f"User logging out: {current_user.email}")
+        logout_user()
+        # Redirect to sign-in page after logout
+        return redirect(url_for('signin_page'))
+    else:
+        # Should not happen if @login_required works, but handle defensively
+        return redirect(url_for('signin_page'))
+
 
 @app.route("/api/check_auth", methods=['GET'])
 def check_auth_status():
@@ -224,7 +237,7 @@ def check_auth_status():
 @app.route("/upload_frame", methods=['POST'])
 #@login_required # Uncomment if login is required
 def upload_frame():
-    """Handles uploading a single frame for prediction."""
+    """Handles uploading a single frame for prediction. Saves with UUID."""
     if not request.is_json: return jsonify({"status": "error", "message": "Request must be JSON."}), 415
     try:
         req_token = str(uuid.uuid4())
@@ -238,40 +251,116 @@ def upload_frame():
         except Exception as e: return jsonify({"status": "error", "message": f"Base64 decoding error: {e}"}), 400
         try: image = Image.open(BytesIO(image_binary)).convert("RGB")
         except Exception as e: return jsonify({"status": "error", "message": f"Error opening image data: {e}"}), 400
+
+        # Save temporarily with UUID in the base TMP_DIR
         save_filename = f"captured_frame-{req_token}.png"; save_path = os.path.join(TMP_DIR, save_filename)
         try: image.save(save_path, format="PNG")
         except Exception as e: print(f"Error saving frame: {e}"); traceback.print_exc(); return jsonify({"status": "error", "message": f"Error saving image file: {e}"}), 500
+
+        # Return the token (UUID)
         return jsonify({"status": "success", "message": "Frame uploaded.", "token": req_token})
     except Exception as e: print(f"Unexpected error in /upload_frame: {e}"); traceback.print_exc(); return jsonify({"status": "error", "message": "Internal server error."}), 500
+
 
 @app.route("/predict", methods=["POST"])
 #@login_required # Uncomment if login is required
 def predict():
-    """Performs prediction on an uploaded frame using its token."""
+    """
+    Performs prediction on an uploaded frame using its token.
+    If prediction is successful (A-Z), moves the temp file to a subdirectory
+    named after the prediction (e.g., A/) and renames it to
+    {PredictedLetter}{SequenceNumber}.png. Otherwise, deletes the temp file.
+    """
     global loaded_model
     if loaded_model is None: return jsonify({"status": "error", "message": "ASL Model not loaded."}), 503
     if not request.is_json: return jsonify({"status": "error", "message": "Request must be JSON."}), 415
+
+    temp_image_path = None # Initialize to None
     try:
         data = request.get_json()
         if not data or 'token' not in data: return jsonify({"status": "error", "message": "Missing 'token'."}), 400
         image_token = data.get('token')
-        if not isinstance(image_token, str) or not all(c in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-' for c in image_token): return jsonify({"status": "error", "message": "Invalid token."}), 400
-        image_filename = f"captured_frame-{image_token}.png"; image_path = os.path.join(TMP_DIR, image_filename)
-        if not os.path.exists(image_path) or not os.path.isfile(image_path): print(f"Pred error: File not found {image_path}"); return jsonify({"status": "error", "message": "Image not found."}), 404
-        landmark_data = predict_lib.get_marks(image_path)
+        # Basic validation for UUID-like tokens
+        if not isinstance(image_token, str) or not re.match(r'^[a-f0-9\-]{36}$', image_token, re.IGNORECASE):
+            return jsonify({"status": "error", "message": "Invalid token format."}), 400
+
+        # Construct the initial temporary file path in the base TMP_DIR
+        temp_image_filename = f"captured_frame-{image_token}.png"
+        temp_image_path = os.path.join(TMP_DIR, temp_image_filename)
+
+        if not os.path.exists(temp_image_path) or not os.path.isfile(temp_image_path):
+            print(f"Pred error: File not found {temp_image_path}")
+            return jsonify({"status": "error", "message": "Image not found."}), 404
+
+        # --- Perform Prediction ---
+        landmark_data = predict_lib.get_marks(temp_image_path)
         if landmark_data is None:
-            try: os.remove(image_path)
-            except OSError as e: print(f"Warn: Cleanup failed {image_path}: {e}")
+            # No hand detected or error getting landmarks - Delete temp file
+            print(f"No landmarks detected for {temp_image_filename}. Deleting.")
+            if os.path.exists(temp_image_path):
+                try: os.remove(temp_image_path)
+                except OSError as e: print(f"Warn: Cleanup failed for {temp_image_path}: {e}")
             return jsonify({"status": "success", "message": "No hand detected", "result": ""})
+
         prediction_result = predict_lib._predict(landmark_data, loaded_model)
-        try: os.remove(image_path)
-        except OSError as e: print(f"Warn: Cleanup failed {image_path}: {e}")
+
+        # --- Handle Renaming/Moving or Deletion ---
+        if prediction_result and 'A' <= prediction_result <= 'Z':
+            # Valid prediction - Move and Rename the file into a subdirectory
+            try:
+                # --- Create Subdirectory ---
+                target_subdir = os.path.join(TMP_DIR, prediction_result)
+                os.makedirs(target_subdir, exist_ok=True) # Create if it doesn't exist
+
+                # --- Find the next sequence number within the subdirectory ---
+                sequence_number = 1
+                # Search pattern inside the target subdirectory
+                pattern = os.path.join(target_subdir, f"{prediction_result}[0-9]*.png")
+                existing_files = glob.glob(pattern)
+                if existing_files:
+                    max_num = 0
+                    for f in existing_files:
+                        basename = os.path.basename(f)
+                        # Extract number (handle cases like A.png, A1.png, A10.png)
+                        match = re.match(rf"^{prediction_result}(\d+)\.png$", basename)
+                        if match:
+                            num = int(match.group(1))
+                            if num > max_num:
+                                max_num = num
+                    sequence_number = max_num + 1
+
+                # --- Construct New Path inside Subdirectory ---
+                new_filename = f"{prediction_result}{sequence_number}.png"
+                new_image_path = os.path.join(target_subdir, new_filename)
+
+                print(f"Moving and Renaming {temp_image_filename} to {os.path.join(prediction_result, new_filename)}")
+                os.rename(temp_image_path, new_image_path) # Move/Rename
+                temp_image_path = None # Prevent deletion of original path in finally block
+
+            except Exception as move_rename_err:
+                print(f"Error moving/renaming file {temp_image_filename}: {move_rename_err}")
+                # Fallback: Delete the original temp file if move/rename failed
+                if temp_image_path and os.path.exists(temp_image_path):
+                    try: os.remove(temp_image_path)
+                    except OSError as e: print(f"Warn: Cleanup failed for {temp_image_path} after move/rename error: {e}")
+                # Still return the prediction, but log the error
+        else:
+            # Invalid or empty prediction - Delete the original temp file
+            print(f"Invalid/Empty prediction ('{prediction_result}') for {temp_image_filename}. Deleting.")
+            if os.path.exists(temp_image_path):
+                try: os.remove(temp_image_path)
+                except OSError as e: print(f"Warn: Cleanup failed for {temp_image_path}: {e}")
+            temp_image_path = None # Prevent potential double-deletion attempt
+
+        # Return successful prediction result
         return jsonify({"status": "success", "message": "Prediction successful", "result": prediction_result})
+
     except Exception as e:
-        print(f"Error during prediction: {e}"); traceback.print_exc()
-        if 'image_path' in locals() and os.path.exists(image_path):
-             try: os.remove(image_path)
-             except Exception: pass
+        print(f"Error during prediction endpoint: {e}"); traceback.print_exc()
+        # Attempt cleanup if temp_image_path was set and still exists
+        if temp_image_path and os.path.exists(temp_image_path):
+            try: os.remove(temp_image_path)
+            except OSError as cleanup_err: print(f"Error cleaning up {temp_image_path} in exception handler: {cleanup_err}")
         return jsonify({"status": "error", "message": "Internal prediction error."}), 500
 
 
@@ -355,6 +444,10 @@ def stream_process_audio_file(audio_path):
         # Concatenate poses
         yield f"data: {json.dumps({'step': 'info', 'message': 'Concatenating loaded poses...'})}\n\n"
         newpose = concatenate_poses(poselist)
+        if newpose is None: # Check if concatenation failed
+             yield f"data: {json.dumps({'step': 'error', 'error': 'Failed to concatenate poses.'})}\n\n"
+             return
+
 
         # STEP 5: Generate a GIF preview of the pose.
         gif_filename = f"{uuid.uuid4()}.gif"
@@ -380,6 +473,7 @@ def stream_process_audio_file(audio_path):
             print(f"Temporary pose saved to {temp_pose_path} (will be cleaned up)")
         except Exception as e:
             print(f"Warning: Failed to save temporary pose file: {e}")
+            # Don't yield an error for this, just log it
 
 
         # --- VIDEO GENERATION STEP REMOVED ---
@@ -412,7 +506,10 @@ def process_audio_for_gif(): # Renamed function
     audio_file = request.files["audio"]
     if audio_file.filename == '': return jsonify({"error": "No selected audio file."}), 400
 
-    suffix = ".wav" # Or determine from mimetype if needed: mimetypes.guess_extension(audio_file.mimetype)
+    # Determine suffix from original filename if possible, otherwise default
+    _, suffix = os.path.splitext(audio_file.filename)
+    if not suffix: suffix = ".webm" # Default if no extension found
+
     audio_path = None
     try:
         # Save audio temporarily (ensure TEMP_DIR_AUDIO exists)
@@ -432,12 +529,14 @@ if __name__ == '__main__':
     # Instructions for running:
     # 1. Ensure MySQL/XAMPP is running and database/user exist. Update credentials above or use ENV variables.
     # 2. Ensure virtual environment is activated.
-    # 3. Set FLASK_APP=app.py (using Powershell: $env:FLASK_APP = "app.py")
+    # 3. Set FLASK_APP=app.py (using Powershell: $env:FLASK_APP = "app.py" OR using bash: export FLASK_APP=app.py)
     # 4. Run DB migrations if needed: flask db init (once), flask db migrate -m "message", flask db upgrade
-    # 5. Install dependencies: pip install -r requirements.txt (or manually: Flask Flask-SQLAlchemy Flask-Login Flask-Migrate mysql-connector-python Werkzeug Pillow tensorflow mediapipe opencv-python faster-whisper pose-format ctranslate2 torch torchvision torchaudio)
-    #    Ensure ffmpeg is installed system-wide and in PATH.
+    # 5. Install dependencies: pip install -r requirements.txt (or manually install all listed imports)
+    #    Ensure ffmpeg is installed system-wide and in PATH (for whisper).
     # 6. Ensure necessary lowercase `.pose` files exist in 'files/static/asl/' (e.g., 'hello.pose', 'world.pose')
     # 7. Run: flask run --host=0.0.0.0 --port=5000
+    #    Use debug=True ONLY for development: flask run --host=0.0.0.0 --port=5000 --debug
+    #    For production, use a proper WSGI server like Gunicorn or uWSGI.
     app.run(debug=False, host='0.0.0.0', port=5000) # Set debug=True for development, but False for stability
 
 # --- END OF FILE app.py ---
