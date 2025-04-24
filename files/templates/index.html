@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -69,10 +70,7 @@
                     <a href="#features" class="text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium">Features</a>
                     <a href="#how-it-works" class="text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium">How It Works</a>
                     <a href="#technology" class="text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium">Technology</a>
-                    
-                    <!-- CORRECTED LINK HERE -->
                     <a href="/signin" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-md transition duration-300 ease-in-out">Sign In</a>
-                    
                     <button
                         id="theme-toggle"
                         aria-label="Toggle dark mode"
@@ -108,8 +106,6 @@
                 <a href="#features" class="block px-6 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Features</a>
                 <a href="#how-it-works" class="block px-6 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">How It Works</a>
                 <a href="#technology" class="block px-6 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Technology</a>
-                
-                <!-- CORRECTED LINK HERE -->
                 <a href="/signin" class="block px-6 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Sign In</a>
             </div>
         </nav>
@@ -130,7 +126,8 @@
                         <div class="relative w-full max-w-md">
                             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl overflow-hidden">
                                 <div class="p-2">
-                                    <img src="img/ASL_BOT.png" alt="Sign language translation demo" class="rounded-lg w-full" />
+                                    <!-- CORRECTED PATH -->
+                                    <img src="/static/img/ASL_BOT.png" alt="Sign language translation demo" class="rounded-lg w-full" />
                                     <div class="absolute top-4 left-4 bg-red-500 text-white px-3 py-1 rounded-full text-xs font-medium">
                                         Live Translation
                                     </div>
@@ -317,7 +314,8 @@
                     </div>
                      <div class="relative">
                         <div class="bg-indigo-100 dark:bg-indigo-900/30 rounded-xl p-8">
-                            <img src="img/ASL.gif" alt="AI technology visualization" class="rounded-lg shadow-lg w-full" />
+                             <!-- CORRECTED PATH -->
+                            <img src="/static/img/ASL.gif" alt="AI technology visualization" class="rounded-lg shadow-lg w-full" />
                             <div class="absolute -top-4 -right-4 bg-indigo-600 text-white p-4 rounded-lg shadow-lg">
                                 <div class="text-3xl font-bold">99%</div>
                                 <div class="text-sm">Translation Accuracy</div>
@@ -340,7 +338,8 @@
                     <!-- Video Container -->
                     <div id="demo-video-container" class="relative aspect-w-16 aspect-h-9 bg-black">
                         <!-- Placeholder Image -->
-                        <img id="demo-placeholder-image" src="img/vid.mp4" alt="Demo video placeholder" class="absolute inset-0 w-full h-full object-cover" />
+                        <!-- CORRECTED PATH -->
+                        <img id="demo-placeholder-image" src="/static/img/vid.mp4" alt="Demo video placeholder" class="absolute inset-0 w-full h-full object-cover" />
                         <!-- Play Button Overlay -->
                         <div id="demo-play-overlay" class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 cursor-pointer">
                             <button id="play-demo-button" aria-label="Play demo video" class="w-20 h-20 bg-indigo-600 rounded-full flex items-center justify-center hover:bg-indigo-700 transition duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
@@ -349,7 +348,7 @@
                                 </svg>
                             </button>
                         </div>
-                         <!-- YouTube Iframe will be inserted here by JS -->
+                         <!-- Video Iframe will be inserted here by JS -->
                     </div>
                     <div class="p-6">
                         <p class="text-gray-700 dark:text-gray-300">
@@ -515,7 +514,7 @@
             // Check initial theme preference (localStorage -> System Preference -> Default Light)
             const checkAndApplyInitialTheme = () => {
                 const storedPreference = localStorage.getItem('darkMode');
-                
+
                 if (storedPreference !== null) {
                     // Use stored preference
                     const isDark = storedPreference === 'true';
@@ -528,7 +527,7 @@
                     applyTheme(systemPrefersDark);
                 }
             };
-            
+
             // Apply initial theme
             checkAndApplyInitialTheme();
 
@@ -560,7 +559,7 @@
                     mobileMenuButton.setAttribute('aria-expanded', String(!isHidden));
                     mobileMenu.setAttribute('aria-hidden', String(isHidden));
                 });
-                
+
                 // Close menu when clicking links
                 mobileMenu.querySelectorAll('a').forEach(link => {
                     link.addEventListener('click', () => {
@@ -580,7 +579,7 @@
             const demoVideoContainer = document.getElementById('demo-video-container');
             const demoPlaceholderImage = document.getElementById('demo-placeholder-image');
             const demoPlayOverlay = document.getElementById('demo-play-overlay');
-            const youtubeVideoId = 'dQw4w9WgXcQ'; // Example ID (Rick Astley)
+            // const youtubeVideoId = 'dQw4w9WgXcQ'; // Example ID (Rick Astley) - Keep commented if using local video
 
             if (playDemoButton && demoVideoContainer && demoPlaceholderImage && demoPlayOverlay) {
                 playDemoButton.addEventListener('click', () => {
@@ -590,16 +589,20 @@
 
                     // Create and append iframe
                     const iframe = document.createElement('iframe');
-                    iframe.setAttribute('src', `img/vid.mp4`);
+                    // CORRECTED PATH
+                    iframe.setAttribute('src', `/static/img/vid.mp4`); // Use the corrected path
                     iframe.setAttribute('title', 'Roots In Sign Demo Video');
                     iframe.setAttribute('frameborder', '0');
-                    iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');
+                    // Add autoplay and controls for local video
+                    iframe.setAttribute('allow', 'autoplay; fullscreen; picture-in-picture');
                     iframe.setAttribute('allowfullscreen', '');
+                    iframe.setAttribute('autoplay', ''); // Attempt autoplay
+                    iframe.setAttribute('controls', ''); // Add controls
                     iframe.classList.add('absolute', 'top-0', 'left-0', 'w-full', 'h-full');
                     demoVideoContainer.appendChild(iframe);
                 });
             }
-            
+
             // Add smooth scroll for internal links
             document.querySelectorAll('a[href^="#"]').forEach(anchor => {
                 anchor.addEventListener('click', function (e) {
@@ -613,7 +616,7 @@
                     }
                 });
             });
-            
+
              // Update 'Get Started' buttons to point to '/register' route
             const getStartedButtons = document.querySelectorAll('a[href="#"][class*="Get Started"]'); // Adjust selector if needed
             getStartedButtons.forEach(button => {
@@ -622,9 +625,8 @@
                       button.setAttribute('href', '/register');
                  }
             });
-            
+
         });
     </script>
 </body>
 </html>
---- END OF FILE index.html ---
