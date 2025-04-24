@@ -1,404 +1,630 @@
-<!-- START OF FILE app.html -->
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Roots In Sign - App</title>
+    <title>Roots In Sign - Breaking Communication Barriers</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/17.0.2/umd/react.development.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/17.0.2/umd/react-dom.development.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/6.26.0/babel.min.js"></script>
+    <!-- Add explicit Tailwind dark mode configuration -->
     <script>
         tailwind.config = {
             darkMode: 'class',
         }
     </script>
     <style>
+        html {
+            scroll-behavior: smooth; /* Add smooth scrolling */
+        }
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f4f7f6;
+            background-color: #f9fafb;
             transition: background-color 0.3s, color 0.3s;
         }
         body.dark {
             background-color: #1a202c;
             color: #e2e8f0;
         }
-        .custom-scrollbar::-webkit-scrollbar { width: 8px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #e0e0e0; border-radius: 10px; }
-        .dark .custom-scrollbar::-webkit-scrollbar-track { background: #2d3748; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
-        .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #4a5568; }
-        .prediction-text { font-size: 1.5rem; font-weight: bold; min-height: 2.5rem; text-align: center; }
-        .speech-to-asl-text-display { font-size: 1.1rem; min-height: 2.5rem; text-align: left; line-height: 1.4; }
-        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #6366f1; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
-        .dark .loader { border: 4px solid #4a5568; border-top: 4px solid #818cf8; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        /* No pose download link style needed */
+        .hero-gradient {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+        }
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        /* Basic mobile menu transition (optional) */
+        #mobile-menu {
+            transition: transform 0.3s ease-in-out;
+        }
+        #mobile-menu.hidden {
+           /* Example using opacity/transform for transition */
+           /* opacity: 0; transform: translateY(-10px); */
+           /* Or just rely on adding/removing from DOM or simple hidden */
+        }
+        /* Ensure aspect ratio utilities work */
+        @tailwind base;
+        @tailwind components;
+        @tailwind utilities;
+
+        @layer utilities {
+         .aspect-w-16 { aspect-ratio: 16 / 9; }
+         .aspect-h-9 { /* not needed if aspect-ratio is supported */ }
+        }
     </style>
 </head>
 <body>
-    <div id="root" class="container mx-auto px-4 py-8"></div>
-
-    {% raw %} <!-- START Jinja Raw Block -->
-    <script type="text/babel">
-
-        const { useState, useEffect, useRef, useCallback } = React;
-
-        // --- SettingsGear Component ---
-        function SettingsGear({ isDarkMode, toggleDarkMode }) {
-            const [isOpen, setIsOpen] = useState(false);
-            const handleLogout = async (e) => {
-                 e.preventDefault();
-                 try {
-                     const response = await fetch('/api/logout');
-                     if (response.ok || response.redirected) {
-                         window.location.href = '/signin';
-                     } else {
-                         console.error("Logout failed:", response.statusText);
-                         alert("Logout failed. Please try again.");
-                     }
-                 } catch (error) {
-                     console.error("Error during logout:", error);
-                     alert("An error occurred during logout.");
-                 }
-                 setIsOpen(false);
-            };
-
-            return (
-                <div className="relative">
+    <div class="relative">
+        <!-- Navigation -->
+        <nav class="bg-white dark:bg-gray-800 shadow-md py-4 sticky top-0 z-50">
+            <div class="container mx-auto px-6 flex items-center justify-between">
+                <div class="flex items-center">
+                    <svg class="w-10 h-10 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11" />
+                    </svg>
+                    <span class="text-2xl font-bold ml-2 text-indigo-700 dark:text-indigo-400">Roots In Sign</span>
+                </div>
+                <!-- Desktop Menu -->
+                <div class="hidden md:flex items-center space-x-4">
+                    <a href="#features" class="text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium">Features</a>
+                    <a href="#how-it-works" class="text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium">How It Works</a>
+                    <a href="#technology" class="text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium">Technology</a>
+                    
+                    <!-- CORRECTED LINK HERE -->
+                    <a href="/signin" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-md transition duration-300 ease-in-out">Sign In</a>
+                    
                     <button
-                        onClick={() => setIsOpen(!isOpen)}
-                        className="text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 focus:outline-none"
+                        id="theme-toggle"
+                        aria-label="Toggle dark mode"
+                        class="text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 focus:outline-none ml-2 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826 3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <!-- Sun icon -->
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 block dark:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"> <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707.707M6.343 6.343l-.707.707m12.728 0l-.707-.707M6.343 17.657l-.707-.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /> </svg>
+                        <!-- Moon icon -->
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 hidden dark:block" fill="none" viewBox="0 0 24 24" stroke="currentColor"> <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /> </svg>
+                    </button>
+                </div>
+                <!-- Mobile Menu Buttons -->
+                <div class="md:hidden flex items-center space-x-2">
+                    <button
+                        id="mobile-theme-toggle"
+                        aria-label="Toggle dark mode"
+                        class="text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 focus:outline-none p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                        <!-- Sun icon -->
+                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 block dark:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"> <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707.707M6.343 6.343l-.707.707m12.728 0l-.707-.707M6.343 17.657l-.707-.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /> </svg>
+                        <!-- Moon icon -->
+                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 hidden dark:block" fill="none" viewBox="0 0 24 24" stroke="currentColor"> <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /> </svg>
+                    </button>
+                    <button id="mobile-menu-button" aria-label="Open mobile menu" aria-expanded="false" class="text-gray-700 dark:text-gray-300 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
                         </svg>
                     </button>
-                    {isOpen && (
-                        <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-700 rounded-lg shadow-lg py-2 z-50">
-                            <div onClick={() => { toggleDarkMode(); setIsOpen(false); }} className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer flex items-center text-gray-800 dark:text-gray-200">
-                                <span className="mr-2">{isDarkMode ? '☀️' : '🌙'}</span> {isDarkMode ? 'Light Mode' : 'Dark Mode'}
-                            </div>
-                            <a href="/api/logout" onClick={handleLogout} className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200"> <span className="mr-2">🚪</span> Logout </a>
-                             <a href="/" className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200"> <span className="mr-2">🏠</span> Home Page </a>
-                        </div>
-                    )}
                 </div>
-            );
-        }
+            </div>
+             <!-- Mobile Menu -->
+            <div id="mobile-menu" class="md:hidden hidden absolute top-full left-0 right-0 bg-white dark:bg-gray-800 shadow-lg py-2 z-40" aria-hidden="true">
+                <a href="#features" class="block px-6 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Features</a>
+                <a href="#how-it-works" class="block px-6 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">How It Works</a>
+                <a href="#technology" class="block px-6 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Technology</a>
+                
+                <!-- CORRECTED LINK HERE -->
+                <a href="/signin" class="block px-6 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Sign In</a>
+            </div>
+        </nav>
 
-        // --- MicrophoneButton Component ---
-        function MicrophoneButton({ isRecording, onStart, onStop, disabled }) {
-             return (
-                 <button
-                     onClick={isRecording ? onStop : onStart}
-                     disabled={disabled}
-                     className={`text-gray-600 dark:text-gray-300 focus:outline-none relative p-1 rounded-full transition-colors duration-200 ${isRecording ? 'bg-red-200 dark:bg-red-800 ' : 'hover:text-gray-800 dark:hover:text-gray-100'} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-                     title={disabled ? "Processing..." : (isRecording ? "Stop Recording" : "Start Recording")}
-                 >
-                     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2a3 3 0 00-3 3v7a3 3 0 006 0V5a3 3 0 00-3-3z" />
-                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 10v2a7 7 0 01-14 0v-2" />
-                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19v3" />
-                     </svg>
-                     {isRecording && (
-                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75 top-0 left-0"></span>
-                     )}
-                 </button>
-             );
-        }
-
-        // --- Main Application Component ---
-        function Sign2SpeakApp() {
-            const [isDarkMode, setIsDarkMode] = useState(false);
-            // Sign-to-Text State
-            const [predictionResult, setPredictionResult] = useState("");
-            const [isPredicting, setIsPredicting] = useState(false);
-            const [isStreamPaused, setIsStreamPaused] = useState(false);
-            const webcamVideoRef = useRef(null);
-            const canvasRef = useRef(document.createElement('canvas'));
-            const intervalRef = useRef(null);
-
-            // Speech-to-ASL GIF Generation State
-            const [isRecording, setIsRecording] = useState(false);
-            const [processingStatus, setProcessingStatus] = useState("Idle");
-            const [transcriptionResult, setTranscriptionResult] = useState("");
-            // const [glossResult, setGlossResult] = useState(""); // Not needed as state
-            const [poseGifUrl, setPoseGifUrl] = useState(null); // Only need GIF URL now
-            const [processingError, setProcessingError] = useState(null);
-            const mediaRecorderRef = useRef(null);
-            const audioChunksRef = useRef([]);
-
-            // Toggle dark mode
-            const toggleDarkMode = () => { const newMode = !isDarkMode; setIsDarkMode(newMode); localStorage.setItem('darkMode', JSON.stringify(newMode)); document.body.classList.toggle('dark', newMode); };
-
-            // Initial dark mode setup
-            useEffect(() => { const savedDarkMode = localStorage.getItem('darkMode'); let initialDarkMode = false; if (savedDarkMode !== null) { initialDarkMode = savedDarkMode === 'true'; } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) { initialDarkMode = true; } setIsDarkMode(initialDarkMode); document.body.classList.toggle('dark', initialDarkMode); }, []);
-
-            // --- Sign-to-Text Logic ---
-            const captureAndPredict = useCallback(async () => { if (isStreamPaused || isPredicting || !webcamVideoRef.current || !webcamVideoRef.current.videoWidth || webcamVideoRef.current.paused || webcamVideoRef.current.ended) return; setIsPredicting(true); let currentToken = null; try { const videoElement = webcamVideoRef.current; const canvas = canvasRef.current; const context = canvas.getContext('2d'); canvas.width = videoElement.videoWidth; canvas.height = videoElement.videoHeight; context.drawImage(videoElement, 0, 0, canvas.width, canvas.height); const imageData = canvas.toDataURL('image/png'); const uploadResponse = await fetch('/upload_frame', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: imageData }) }); if (!uploadResponse.ok) throw new Error(`Upload failed: ${uploadResponse.statusText}`); const uploadData = await uploadResponse.json(); if (uploadData.status !== 'success' || !uploadData.token) throw new Error(`Upload error: ${uploadData.message || 'No token'}`); currentToken = uploadData.token; const predictResponse = await fetch('/predict', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: currentToken }) }); if (!predictResponse.ok) throw new Error(`Prediction failed: ${predictResponse.statusText}`); const predictionData = await predictResponse.json(); if (predictionData.status === 'success') setPredictionResult(predictionData.result || ""); else { console.error('Prediction API error:', predictionData.message); setPredictionResult(""); } } catch (error) { console.error('Error in capture/predict cycle:', error); setPredictionResult("Error"); } finally { setIsPredicting(false); } }, [isPredicting, isStreamPaused]);
-            const startPredictionInterval = useCallback(() => { stopPredictionInterval(); if (!isStreamPaused && webcamVideoRef.current && webcamVideoRef.current.srcObject) { intervalRef.current = setInterval(captureAndPredict, 500); console.log("Prediction interval started."); } else { console.log("Prediction interval not started."); } }, [isStreamPaused, captureAndPredict]);
-            const stopPredictionInterval = () => { if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; console.log("Prediction interval stopped."); } };
-            const toggleStreamPause = () => { setIsStreamPaused(prevPaused => { const newPausedState = !prevPaused; if (newPausedState) stopPredictionInterval(); else { if (webcamVideoRef.current && webcamVideoRef.current.srcObject && webcamVideoRef.current.readyState >= 3) startPredictionInterval(); else console.log("Resume attempt failed: Webcam not ready."); } console.log(`Stream capture ${newPausedState ? 'paused' : 'resumed'}.`); return newPausedState; }); };
-            useEffect(() => { let stream = null; let isMounted = true; const setupWebcam = async () => { try { stream = await navigator.mediaDevices.getUserMedia({ video: true }); if (isMounted && webcamVideoRef.current) { webcamVideoRef.current.srcObject = stream; webcamVideoRef.current.onloadedmetadata = () => { if (isMounted) { console.log("Webcam started."); if (!isStreamPaused) startPredictionInterval(); } }; webcamVideoRef.current.onerror = (e) => { console.error('Webcam error:', e); if (isMounted) setPredictionResult("Webcam Error"); }; if (stream.getVideoTracks().length > 0) stream.getVideoTracks()[0].onended = () => { console.log("Webcam track ended."); if (isMounted) setPredictionResult("Webcam Disconnected"); stopPredictionInterval(); }; } } catch (err) { console.error('Webcam access error:', err); if (isMounted) setPredictionResult("Webcam Error"); } }; setupWebcam(); return () => { isMounted = false; stopPredictionInterval(); if (stream) stream.getTracks().forEach(track => track.stop()); if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') mediaRecorderRef.current.stop(); }; }, [startPredictionInterval, isStreamPaused]);
-
-            // --- Speech-to-ASL GIF Generation Logic ---
-
-            const handleSseEvent = (eventData) => {
-                console.log("SSE Event:", eventData);
-                const step = eventData.step;
-                const message = eventData.message;
-                const error = eventData.error;
-
-                if (step === "info" && message && message !== "Processing finished.") {
-                   setProcessingStatus(message);
-                } else if (step === "transcription") {
-                   setProcessingStatus("Processing Transcription...");
-                   setTranscriptionResult(eventData.transcription || "No speech detected.");
-                // } else if (step === "gloss") { // Gloss step might be removed or less relevant now
-                   // setProcessingStatus("Processing Gloss...");
-                }
-                // *** SUCCESS CASE: GIF is the final output ***
-                else if (step === "pose_gif") {
-                   setProcessingStatus("Complete"); // Final success status
-                   // Use URL from backend event, add cache buster just in case
-                   setPoseGifUrl((eventData.url || `/static/videos/${eventData.gif_filename}`) + `?t=${new Date().getTime()}`);
-                } else if (step === "warning" && message) {
-                    console.warn("Processing Warning:", message);
-                    // Optionally display warning to user by appending to error state or similar
-                    setProcessingError(prev => prev ? `${prev}\nWarning: ${message}` : `Warning: ${message}`);
-                 } else if (step === "error") {
-                   const fullErrorMessage = error + (eventData.details ? `: ${eventData.details}` : '');
-                   console.error("Processing Error:", fullErrorMessage);
-                   setProcessingStatus("Error");
-                   setProcessingError(eventData.error || 'An unknown error occurred.');
-                   setPoseGifUrl(null); // Clear GIF on error
-                } else if (step === "info" && message === "Processing finished.") {
-                    console.log("Ignoring final 'Processing finished.' info message.");
-                }
-            };
-
-            const startRecording = async () => {
-                setProcessingStatus("Initializing...");
-                setTranscriptionResult("");
-                // setGlossResult(""); // Not needed as state
-                setPoseGifUrl(null);
-                setProcessingError(null);
-                setIsRecording(false);
-                let stream = null;
-                try {
-                    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    const options = { mimeType: 'audio/webm' };
-                    if (!MediaRecorder.isTypeSupported(options.mimeType)) { options.mimeType = ''; }
-                    mediaRecorderRef.current = new MediaRecorder(stream, options);
-                    audioChunksRef.current = [];
-                    mediaRecorderRef.current.ondataavailable = (event) => { if (event.data.size > 0) audioChunksRef.current.push(event.data); };
-
-                    mediaRecorderRef.current.onstop = async () => {
-                        console.log("Recording stopped.");
-                        const blobType = mediaRecorderRef.current.mimeType || 'audio/webm';
-                        const audioBlob = new Blob(audioChunksRef.current, { type: blobType });
-                        console.log("Blob size:", audioBlob.size, "Type:", blobType);
-                        if(stream) stream.getTracks().forEach(track => track.stop()); // Stop tracks
-
-                        if (audioBlob.size === 0) {
-                           console.warn("Empty audio."); setProcessingStatus("Error"); setProcessingError("Recording failed (empty audio)."); setIsRecording(false); return;
-                        }
-
-                        setProcessingStatus("Uploading...");
-                        const formData = new FormData();
-                        // --- CORRECTED Line 168 ---
-                        // Determine file extension more safely
-                        let extension = 'webm'; // Default
-                        if (blobType) {
-                            const typeParts = blobType.split('/');
-                            if (typeParts.length > 1) {
-                                const subtypeParts = typeParts[1].split(';'); // Handle potential parameters
-                                if (subtypeParts.length > 0 && subtypeParts[0]) {
-                                    extension = subtypeParts[0];
-                                }
-                            }
-                        }
-                        const filename = `recording.${extension}`;
-                        // --- END CORRECTION ---
-                        formData.append('audio', audioBlob, filename);
-
-                        try {
-                            const response = await fetch('/process', { method: 'POST', body: formData });
-                            if (!response.ok || !response.body) { const errorText = await response.text().catch(() => `HTTP Error: ${response.status} ${response.statusText}`); throw new Error(`Server error: ${errorText}`); }
-                            const reader = response.body.getReader(); const decoder = new TextDecoder("utf-8"); let buffer = "";
-
-                            while (true) {
-                                const { done, value } = await reader.read();
-                                if (done) {
-                                     console.log("SSE stream finished.");
-                                     setProcessingStatus(prevStatus => {
-                                         console.log("Stream ended check. Status:", prevStatus);
-                                         if (prevStatus !== "Complete" && prevStatus !== "Error") { console.warn("Stream ended unexpectedly. Resetting to Idle."); setPoseGifUrl(null); return "Idle"; }
-                                         return prevStatus;
-                                     }); break;
-                                }
-                                buffer += decoder.decode(value, { stream: true }); const parts = buffer.split("\n\n"); buffer = parts.pop();
-                                for (const part of parts) { if (part.startsWith("data: ")) { const jsonString = part.substring(6).trim(); if (jsonString) { try { const eventData = JSON.parse(jsonString); handleSseEvent(eventData); } catch (e) { console.error("Error parsing SSE:", e, "String:", jsonString); } } } }
-                            } // end while
-                        } catch (err) {
-                            console.error('SSE Error:', err); setProcessingStatus("Error"); setProcessingError(`Connection Error: ${err.message}`); setPoseGifUrl(null);
-                        } finally {
-                           if(stream && stream.active) stream.getTracks().forEach(track => track.stop());
-                           console.log("Processing attempt finished.");
-                        }
-                    }; // end onstop
-
-                    mediaRecorderRef.current.start();
-                    setIsRecording(true); setProcessingStatus("Recording...");
-                } catch (err) {
-                    console.error('Mic access error:', err); setProcessingStatus("Error"); setProcessingError(`Mic Error: ${err.message}`); setIsRecording(false);
-                    if(stream) stream.getTracks().forEach(track => track.stop());
-                }
-            }; // end startRecording
-
-            const stopRecording = () => {
-                if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-                    console.log("Stop clicked."); setIsRecording(false);
-                    try { mediaRecorderRef.current.stop(); }
-                    catch (e) {
-                        console.error("Error stopping recorder:", e);
-                        setProcessingStatus("Error");
-                        setProcessingError("Error stopping recording.");
-                        // Explicit checks instead of optional chaining
-                        if (mediaRecorderRef.current && mediaRecorderRef.current.stream && mediaRecorderRef.current.stream.active) {
-                           mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
-                        }
-                    }
-                } else {
-                    console.warn("Stop called but not recording.");
-                    setIsRecording(false);
-                }
-            };
-
-
-            // --- Component Rendering ---
-            const topSections = [
-                { id: 'sign-to-text-video', title: 'Sign to Text', content: ( <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md h-full flex flex-col"> <div className="flex-grow relative mb-4"> <video ref={webcamVideoRef} autoPlay muted playsInline className="w-full h-full object-cover rounded-lg bg-gray-900" style={{aspectRatio: '16/9'}} id="webcamVideo" /> <div className={`absolute top-4 left-4 text-white px-3 py-1 rounded-full text-sm font-medium pointer-events-none shadow ${isStreamPaused ? 'bg-yellow-500' : (['Error', 'Webcam Error', 'Webcam Disconnected'].includes(predictionResult) ? 'bg-red-600' : 'bg-green-500 ')}`}> {isStreamPaused ? 'Paused' : (['Error', 'Webcam Error', 'Webcam Disconnected'].includes(predictionResult) ? 'Error' : 'Live')} </div> <button onClick={toggleStreamPause} disabled={!webcamVideoRef.current || !webcamVideoRef.current.srcObject || ['Error', 'Webcam Error', 'Webcam Disconnected'].includes(predictionResult)} className="absolute top-4 right-4 bg-gray-700 bg-opacity-60 text-white p-2 rounded-full hover:bg-opacity-80 focus:outline-none z-10 transition-opacity duration-200 disabled:opacity-50 disabled:cursor-not-allowed" title={isStreamPaused ? "Resume Capture" : "Pause Capture"}> {isStreamPaused ? ( <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg> ) : ( <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clipRule="evenodd" /></svg> )} </button> </div> <div className="flex-shrink-0 mt-auto bg-green-100 dark:bg-gray-700 p-3 rounded-lg shadow-inner"> <p className="text-green-800 dark:text-green-200 prediction-text"> {predictionResult || "..."} </p> </div> </div> ) },
-                {
-                    id: 'speech-to-asl-gif',
-                    title: 'Speech to ASL GIF',
-                    content: (
-                        <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md h-full flex flex-col">
-                             {/* Output Area - REVISED for GIF */}
-                             <div className="flex-grow relative flex items-center justify-center bg-gray-200 dark:bg-gray-700 rounded-lg mb-4 min-h-[200px]">
-                                {processingStatus === "Complete" && poseGifUrl ? (
-                                    // Display GIF preview on success
-                                    <div className="text-center p-4">
-                                        <img src={poseGifUrl} alt="Generated ASL Pose GIF" className="max-w-full max-h-full object-contain rounded-lg mx-auto" />
+        <!-- Hero Section -->
+        <div class="hero-gradient text-white py-20">
+            <div class="container mx-auto px-6">
+                <div class="flex flex-col md:flex-row items-center">
+                    <div class="md:w-1/2 mb-10 md:mb-0">
+                        <h1 class="text-4xl md:text-5xl font-bold leading-tight mb-4">Breaking Communication Barriers</h1>
+                        <p class="text-xl mb-8">Roots In Sign uses cutting-edge AI to translate between sign language and spoken language in real-time, creating seamless communication for everyone.</p>
+                        <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+                            <a href="/register" class="bg-white text-indigo-700 hover:bg-gray-100 font-semibold py-3 px-6 rounded-md shadow-md transition duration-300 ease-in-out text-center">Get Started</a>
+                            <a href="#demo" class="bg-transparent border-2 border-white hover:bg-white hover:text-indigo-700 text-white font-semibold py-3 px-6 rounded-md transition duration-300 ease-in-out text-center">Watch Demo</a>
+                        </div>
+                    </div>
+                    <div class="md:w-1/2 flex justify-center">
+                        <div class="relative w-full max-w-md">
+                            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl overflow-hidden">
+                                <div class="p-2">
+                                    <img src="img/ASL_BOT.png" alt="Sign language translation demo" class="rounded-lg w-full" />
+                                    <div class="absolute top-4 left-4 bg-red-500 text-white px-3 py-1 rounded-full text-xs font-medium">
+                                        Live Translation
                                     </div>
-                                ) : ["Uploading...", "Transcribing...", "Processing Transcription...", "Loading pose file(s) for:", "Loading poses for:", "Concatenating loaded poses...", "Generating GIF preview..."].some(s => processingStatus.startsWith(s)) ? ( // Improved loader check
-                                    // Display loader during processing
-                                    <div className="text-center">
-                                        <div className="loader"></div>
-                                        <p className="text-gray-600 dark:text-gray-400 mt-2">{processingStatus}...</p>
-                                    </div>
-                                ) : processingStatus === "Error" && processingError ? (
-                                     // Display error message
-                                      <div className="text-center p-4 text-red-600 dark:text-red-400">
-                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-red-500 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"> <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /> </svg>
-                                        <p className="font-semibold">Error:</p> <p className="text-sm break-words">{processingError}</p>
-                                    </div>
-                                ) : (
-                                    // Initial state prompt
-                                    <div className="text-center p-4">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-24 w-24 text-gray-400 dark:text-gray-500 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l-1.586-1.586a2 2 0 00-2.828 0L6 14m6-6l.586-.586a2 2 0 012.828 0L18 10m-8 8h.01M5 21h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2z" /> {/* Image/GIF icon */}
-                                        </svg>
-                                        <p className="mt-4 text-gray-500 dark:text-gray-400 text-sm">Record audio to generate ASL GIF</p>
-                                     </div>
-                                )}
-                            </div>
-                            {/* Control Area */}
-                            <div className="flex-shrink-0 mt-auto bg-purple-100 dark:bg-gray-700 p-3 rounded-lg shadow-inner">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex-grow mr-3 overflow-auto max-h-20 custom-scrollbar">
-                                        <p className="text-purple-800 dark:text-purple-200 speech-to-asl-text-display" title={transcriptionResult || processingStatus}>
-                                            {processingError && processingStatus === "Error" ? ( <span className="font-semibold text-red-600 dark:text-red-400">Error: {processingError}</span> )
-                                            : isRecording ? ( <span className="italic text-red-600 dark:text-red-400">Recording...</span> )
-                                            : processingStatus !== "Idle" && processingStatus !== "Complete" && processingStatus !== "Error" ? ( <span className="italic text-gray-600 dark:text-gray-400">{processingStatus}...</span> )
-                                            : transcriptionResult && (processingStatus === "Complete" || processingStatus === "Error") ? ( <span>{transcriptionResult}</span> )
-                                            : ( <span className="italic text-gray-500 dark:text-gray-400">Press mic to start recording</span> )}
-                                        </p>
-                                         {/* Maybe display gloss if needed: glossResult && ... */}
-                                    </div>
-                                    <div className="flex-shrink-0">
-                                        <MicrophoneButton isRecording={isRecording} onStart={startRecording} onStop={stopRecording} disabled={!isRecording && !["Idle", "Complete", "Error"].includes(processingStatus)} />
-                                    </div>
+                                </div>
+                                <div class="p-4 bg-gray-50 dark:bg-gray-700">
+                                    <p class="text-gray-800 dark:text-gray-200 font-medium">
+                                        "a"
+                                    </p>
                                 </div>
                             </div>
                         </div>
-                    )
-                }
-            ];
-
-             // --- Bottom Description Sections ---
-             const bottomSections = [
-                { id: 'sign-to-text-details', content: ( <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md"> <h2 className="text-2xl font-bold mb-4 text-indigo-700 dark:text-indigo-400">Sign to Text Translation</h2> <div className="space-y-4 text-gray-700 dark:text-gray-300"> <p> Utilizes your device's webcam to capture American Sign Language (ASL) gestures. Advanced computer vision models analyze hand shapes, movements, and facial expressions in real-time. Use the pause button (<svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 inline-block relative -top-0.5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clipRule="evenodd" /></svg>) on the video feed to temporarily stop translation. </p> <h3 className="text-xl font-semibold text-indigo-600 dark:text-indigo-400">Key Process:</h3> <ol className="list-decimal list-inside space-y-2"> <li>Real-time video frame capture (~5 FPS)</li> <li>Frame sent to server for landmark detection (MediaPipe)</li> <li>Landmark data normalization and feature extraction</li> <li>Machine learning model inference (TensorFlow/Keras)</li> <li>Output of recognized letter prediction displayed</li> </ol> <div className="bg-blue-100 dark:bg-blue-900 p-4 rounded-lg"> <h4 className="font-bold mb-2 text-blue-800 dark:text-blue-200">Current Status:</h4> <ul className="list-disc list-inside"> <li>Recognizes individual ASL alphabet letters.</li> <li>Requires good lighting and clear hand view.</li> <li>Translation happens frame-by-frame.</li> </ul> </div> </div> </div> ) },
-                {
-                    id: 'speech-to-asl-gif-details',
-                     content: (
-                        <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md">
-                            <h2 className="text-2xl font-bold mb-4 text-indigo-700 dark:text-indigo-400">Speech to ASL GIF Generation</h2>
-                            <div className="space-y-4 text-gray-700 dark:text-gray-300">
-                                <p>
-                                    Click the microphone icon (<svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 inline-block relative -top-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2a3 3 0 00-3 3v7a3 3 0 006 0V5a3 3 0 00-3-3z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 10v2a7 7 0 01-14 0v-2" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19v3" /></svg>) to record your speech. The audio is transcribed, and the system attempts to generate an animated GIF representing the ASL equivalent of the recognized words.
-                                </p>
-                                <h3 className="text-xl font-semibold text-indigo-600 dark:text-indigo-400">Process Overview:</h3>
-                                <ol className="list-decimal list-inside space-y-2">
-                                    <li>Microphone audio capture.</li>
-                                    <li>Audio sent to server upon stopping recording.</li>
-                                    <li>Speech-to-Text (STT) conversion using Faster-Whisper.</li>
-                                    <li>Loading corresponding `.pose` files for each transcribed word (converted to lowercase).</li>
-                                    <li>Concatenating the loaded pose files into a single sequence.</li>
-                                    <li>Generating an animated GIF preview from the concatenated pose data.</li>
-                                    <li>Streaming updates (Transcription, Status, GIF URL) back to the interface.</li>
-                                </ol>
-                                <div className="bg-yellow-100 dark:bg-yellow-900 p-4 rounded-lg">
-                                    <h4 className="font-bold mb-2 text-yellow-800 dark:text-yellow-200">Current Status & Limitations:</h4>
-                                    <ul className="list-disc list-inside">
-                                        <li>Speech is transcribed to text.</li>
-                                        <li>An animated GIF is generated based on the available `.pose` files for the transcribed words.</li>
-                                        <li>The generated GIF is displayed upon completion.</li>
-                                        <li><strong>Removed:</strong> MP4 video generation is not performed. Pose file download is not offered.</li>
-                                        <li><strong>Limitation:</strong> Will fail or produce an incomplete GIF if `.pose` files are missing for any transcribed words.</li>
-                                        <li><strong>Limitation:</strong> No actual Text-to-Gloss translation occurs; direct word-to-pose mapping is attempted.</li>
-                                        <li><strong>Dependency:</strong> Requires correctly named, lowercase `.pose` files (e.g., `hello.pose`, `world.pose`) for expected words to exist in the `files/static/asl/` directory on the server.</li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                     )
-                }
-             ];
-
-            // --- Main Render Structure ---
-            return (
-                <div className="relative">
-                    <div className="absolute top-0 right-0 m-4 z-20"> <SettingsGear isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} /> </div>
-                    <div className="container mx-auto">
-                        <h1 className="text-4xl md:text-5xl font-bold text-center text-indigo-700 dark:text-indigo-400 mb-8 pt-8 md:pt-4"> Roots In Sign Interface </h1>
-                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4"> {topSections.map((section) => ( <div key={section.id} className="min-h-[40vh] md:min-h-[50vh]"> {section.content} </div> ))} </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4"> {bottomSections.map((section) => ( <div key={section.id} className="custom-scrollbar"> {section.content} </div> ))} </div>
                     </div>
                 </div>
-            );
-        } // End Sign2SpeakApp Component
+            </div>
+        </div>
 
-        ReactDOM.render(<Sign2SpeakApp />, document.getElementById('root'));
+        <!-- Features Section -->
+        <section id="features" class="py-16 bg-white dark:bg-gray-800">
+            <div class="container mx-auto px-6">
+                <h2 class="text-3xl font-bold text-center text-gray-800 dark:text-gray-200 mb-12">Powerful Features</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <!-- Feature 1 -->
+                     <div class="feature-card bg-white dark:bg-gray-700 rounded-xl shadow-lg p-6 transition duration-300 ease-in-out border border-gray-200 dark:border-gray-600">
+                        <div class="w-12 h-12 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center mb-4">
+                            <svg class="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-semibold mb-2 text-indigo-600 dark:text-indigo-400">Real-time Translation</h3>
+                        <p class="text-gray-600 dark:text-gray-300">Instantly translate between sign language and text with minimal delay, enabling fluid conversations.</p>
+                    </div>
+                    <!-- Feature 2 -->
+                    <div class="feature-card bg-white dark:bg-gray-700 rounded-xl shadow-lg p-6 transition duration-300 ease-in-out border border-gray-200 dark:border-gray-600">
+                        <div class="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mb-4">
+                            <svg class="w-6 h-6 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-semibold mb-2 text-green-600 dark:text-green-400">Bidirectional Communication</h3>
+                        <p class="text-gray-600 dark:text-gray-300">Speak or sign - communicate both ways seamlessly with our advanced two-way translation system.</p>
+                    </div>
+                    <!-- Feature 3 -->
+                    <div class="feature-card bg-white dark:bg-gray-700 rounded-xl shadow-lg p-6 transition duration-300 ease-in-out border border-gray-200 dark:border-gray-600">
+                        <div class="w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center mb-4">
+                            <svg class="w-6 h-6 text-purple-600 dark:text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-semibold mb-2 text-purple-600 dark:text-purple-400">Advanced AI Technology</h3>
+                        <p class="text-gray-600 dark:text-gray-300">Powered by state-of-the-art machine learning models for accurate and nuanced translations.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
 
+        <!-- How It Works Section -->
+        <section id="how-it-works" class="py-16 bg-gray-50 dark:bg-gray-900">
+            <div class="container mx-auto px-6">
+                 <h2 class="text-3xl font-bold text-center text-gray-800 dark:text-gray-200 mb-12">How It Works</h2>
+                 <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+                    <!-- Sign to Text -->
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+                        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+                            <h3 class="text-2xl font-bold text-indigo-700 dark:text-indigo-400 mb-2">Sign to Text Translation</h3>
+                            <p class="text-gray-600 dark:text-gray-300">Convert sign language into written text instantly.</p>
+                        </div>
+                        <div class="p-6">
+                            <ol class="space-y-4">
+                                <li class="flex items-start">
+                                    <div class="flex-shrink-0 w-8 h-8 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center mr-3 mt-1">
+                                        <span class="text-indigo-600 dark:text-indigo-400 font-semibold">1</span>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-medium text-gray-800 dark:text-gray-200">Webcam Capture</h4>
+                                        <p class="text-gray-600 dark:text-gray-400">Your webcam captures sign language gestures in real-time</p>
+                                    </div>
+                                </li>
+                                <li class="flex items-start">
+                                    <div class="flex-shrink-0 w-8 h-8 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center mr-3 mt-1">
+                                        <span class="text-indigo-600 dark:text-indigo-400 font-semibold">2</span>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-medium text-gray-800 dark:text-gray-200">AI Analysis</h4>
+                                        <p class="text-gray-600 dark:text-gray-400">Our algorithm analyzes hand movements and body language</p>
+                                    </div>
+                                </li>
+                                <li class="flex items-start">
+                                    <div class="flex-shrink-0 w-8 h-8 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center mr-3 mt-1">
+                                        <span class="text-indigo-600 dark:text-indigo-400 font-semibold">3</span>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-medium text-gray-800 dark:text-gray-200">Machine Learning Translation</h4>
+                                        <p class="text-gray-600 dark:text-gray-400">Advanced ML models translate signs to accurate text</p>
+                                    </div>
+                                </li>
+                                <li class="flex items-start">
+                                    <div class="flex-shrink-0 w-8 h-8 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center mr-3 mt-1">
+                                        <span class="text-indigo-600 dark:text-indigo-400 font-semibold">4</span>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-medium text-gray-800 dark:text-gray-200">Instant Output</h4>
+                                        <p class="text-gray-600 dark:text-gray-400">Text appears on screen immediately for seamless communication</p>
+                                    </div>
+                                </li>
+                            </ol>
+                        </div>
+                    </div>
+
+                    <!-- Speech to Sign -->
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+                        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+                            <h3 class="text-2xl font-bold text-indigo-700 dark:text-indigo-400 mb-2">Speech to ASL Translation</h3>
+                            <p class="text-gray-600 dark:text-gray-300">Transform spoken words into comprehensive sign language.</p>
+                        </div>
+                        <div class="p-6">
+                            <ol class="space-y-4">
+                                <li class="flex items-start">
+                                    <div class="flex-shrink-0 w-8 h-8 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center mr-3 mt-1">
+                                        <span class="text-indigo-600 dark:text-indigo-400 font-semibold">1</span>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-medium text-gray-800 dark:text-gray-200">Speech Capture</h4>
+                                        <p class="text-gray-600 dark:text-gray-400">Your microphone captures spoken language</p>
+                                    </div>
+                                </li>
+                                <li class="flex items-start">
+                                    <div class="flex-shrink-0 w-8 h-8 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center mr-3 mt-1">
+                                        <span class="text-indigo-600 dark:text-indigo-400 font-semibold">2</span>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-medium text-gray-800 dark:text-gray-200">Language Processing</h4>
+                                        <p class="text-gray-600 dark:text-gray-400">Natural language processing analyzes speech content</p>
+                                    </div>
+                                </li>
+                                <li class="flex items-start">
+                                    <div class="flex-shrink-0 w-8 h-8 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center mr-3 mt-1">
+                                        <span class="text-indigo-600 dark:text-indigo-400 font-semibold">3</span>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-medium text-gray-800 dark:text-gray-200">Sign Generation</h4>
+                                        <p class="text-gray-600 dark:text-gray-400">AI generates corresponding sign language movements</p>
+                                    </div>
+                                </li>
+                                <li class="flex items-start">
+                                    <div class="flex-shrink-0 w-8 h-8 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center mr-3 mt-1">
+                                        <span class="text-indigo-600 dark:text-indigo-400 font-semibold">4</span>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-medium text-gray-800 dark:text-gray-200">Avatar Rendering</h4>
+                                        <p class="text-gray-600 dark:text-gray-400">Digital avatar performs the sign language translation</p>
+                                    </div>
+                                </li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Technology Section -->
+        <section id="technology" class="py-16 bg-white dark:bg-gray-800">
+             <div class="container mx-auto px-6">
+                <h2 class="text-3xl font-bold text-center text-gray-800 dark:text-gray-200 mb-12">Our Technology</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+                    <div>
+                        <h3 class="text-2xl font-bold text-indigo-700 dark:text-indigo-400 mb-4">Cutting-edge AI</h3>
+                        <p class="text-gray-600 dark:text-gray-300 mb-6">
+                            Roots In Sign leverages state-of-the-art machine learning models to provide accurate, contextual translations between sign language and text.
+                        </p>
+                        <div class="space-y-4">
+                             <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                                <h4 class="font-semibold text-gray-800 dark:text-gray-200 mb-2">Advanced Computer Vision</h4>
+                                <p class="text-gray-600 dark:text-gray-400">Our technology tracks and interprets complex hand movements, facial expressions, and body language with high precision.</p>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                                <h4 class="font-semibold text-gray-800 dark:text-gray-200 mb-2">Natural Language Processing</h4>
+                                <p class="text-gray-600 dark:text-gray-400">Sophisticated language models understand context and nuance for more accurate translations.</p>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                                <h4 class="font-semibold text-gray-800 dark:text-gray-200 mb-2">Real-time Processing</h4>
+                                <p class="text-gray-600 dark:text-gray-400">Optimized algorithms ensure fast, responsive translations with minimal latency.</p>
+                            </div>
+                        </div>
+                    </div>
+                     <div class="relative">
+                        <div class="bg-indigo-100 dark:bg-indigo-900/30 rounded-xl p-8">
+                            <img src="img/ASL.gif" alt="AI technology visualization" class="rounded-lg shadow-lg w-full" />
+                            <div class="absolute -top-4 -right-4 bg-indigo-600 text-white p-4 rounded-lg shadow-lg">
+                                <div class="text-3xl font-bold">99%</div>
+                                <div class="text-sm">Translation Accuracy</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Demo Section -->
+        <section id="demo" class="py-16 bg-gray-50 dark:bg-gray-900">
+            <div class="container mx-auto px-6">
+                <h2 class="text-3xl font-bold text-center text-gray-800 dark:text-gray-200 mb-12">See It In Action</h2>
+                <div class="max-w-4xl mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+                    <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+                        <h3 class="text-2xl font-bold text-indigo-700 dark:text-indigo-400 mb-2">Roots In Sign Demo</h3>
+                        <p class="text-gray-600 dark:text-gray-300">Watch how our technology bridges the communication gap in real-time.</p>
+                    </div>
+                    <!-- Video Container -->
+                    <div id="demo-video-container" class="relative aspect-w-16 aspect-h-9 bg-black">
+                        <!-- Placeholder Image -->
+                        <img id="demo-placeholder-image" src="img/vid.mp4" alt="Demo video placeholder" class="absolute inset-0 w-full h-full object-cover" />
+                        <!-- Play Button Overlay -->
+                        <div id="demo-play-overlay" class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 cursor-pointer">
+                            <button id="play-demo-button" aria-label="Play demo video" class="w-20 h-20 bg-indigo-600 rounded-full flex items-center justify-center hover:bg-indigo-700 transition duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                <svg class="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M8 5v14l11-7z" />
+                                </svg>
+                            </button>
+                        </div>
+                         <!-- YouTube Iframe will be inserted here by JS -->
+                    </div>
+                    <div class="p-6">
+                        <p class="text-gray-700 dark:text-gray-300">
+                            This demo showcases both Sign-to-Text and Speech-to-Sign capabilities of our platform, demonstrating how Roots In Sign can facilitate smooth conversations between sign language users and non-signers.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Testimonials Section -->
+        <section class="py-16 bg-white dark:bg-gray-800">
+           <div class="container mx-auto px-6">
+                <h2 class="text-3xl font-bold text-center text-gray-800 dark:text-gray-200 mb-12">What Our Users Say</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <!-- Testimonial 1 -->
+                     <div class="bg-gray-50 dark:bg-gray-700 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-600">
+                        <div class="flex items-center mb-4">
+                            <div class="w-12 h-12 bg-indigo-100 dark:bg-indigo-800 rounded-full flex items-center justify-center text-xl font-bold text-indigo-600 dark:text-indigo-300 flex-shrink-0"> JD </div>
+                            <div class="ml-4">
+                                <h4 class="font-semibold text-gray-800 dark:text-gray-200">Jane Doe</h4>
+                                <p class="text-gray-500 dark:text-gray-400 text-sm">ASL Interpreter</p>
+                            </div>
+                        </div>
+                        <p class="text-gray-600 dark:text-gray-300 italic"> "Roots In Sign has revolutionized my work as an interpreter. The accuracy is astonishing, and it's helping me reach more people than ever before." </p>
+                        <div class="mt-4 flex text-yellow-400"> <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"> <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /> </svg> <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"> <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /> </svg> <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"> <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /> </svg> <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"> <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /> </svg> <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"> <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /> </svg> </div>
+                    </div>
+                    <!-- Testimonial 2 -->
+                    <div class="bg-gray-50 dark:bg-gray-700 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-600">
+                         <div class="flex items-center mb-4">
+                            <div class="w-12 h-12 bg-indigo-100 dark:bg-indigo-800 rounded-full flex items-center justify-center text-xl font-bold text-indigo-600 dark:text-indigo-300 flex-shrink-0"> MS </div>
+                            <div class="ml-4">
+                                <h4 class="font-semibold text-gray-800 dark:text-gray-200">Michael Smith</h4>
+                                <p class="text-gray-500 dark:text-gray-400 text-sm">Deaf Community Advocate</p>
+                            </div>
+                        </div>
+                        <p class="text-gray-600 dark:text-gray-300 italic"> "For the first time, I can have spontaneous conversations with hearing people without an interpreter present. Roots In Sign is life-changing technology." </p>
+                        <div class="mt-4 flex text-yellow-400"> <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"> <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /> </svg> <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"> <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /> </svg> <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"> <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /> </svg> <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"> <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /> </svg> <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"> <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /> </svg> </div>
+                    </div>
+                     <!-- Testimonial 3 -->
+                    <div class="bg-gray-50 dark:bg-gray-700 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-600">
+                         <div class="flex items-center mb-4">
+                            <div class="w-12 h-12 bg-indigo-100 dark:bg-indigo-800 rounded-full flex items-center justify-center text-xl font-bold text-indigo-600 dark:text-indigo-300 flex-shrink-0"> AT </div>
+                            <div class="ml-4">
+                                <h4 class="font-semibold text-gray-800 dark:text-gray-200">Anna Thompson</h4>
+                                <p class="text-gray-500 dark:text-gray-400 text-sm">Educator</p>
+                            </div>
+                        </div>
+                        <p class="text-gray-600 dark:text-gray-300 italic"> "In my classroom, Roots In Sign has created an inclusive environment where all students can participate equally, regardless of hearing ability." </p>
+                        <div class="mt-4 flex text-yellow-400"> <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"> <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /> </svg> <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"> <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /> </svg> <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"> <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /> </svg> <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"> <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /> </svg> <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"> <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /> </svg> </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Call to Action Section -->
+        <section id="cta" class="py-16 bg-indigo-600">
+           <div class="container mx-auto px-6 text-center">
+                <h2 class="text-3xl font-bold text-white mb-4">Ready to Break Communication Barriers?</h2>
+                <p class="text-indigo-100 text-xl mb-8 max-w-3xl mx-auto">
+                    Join thousands of users who are already experiencing seamless communication with Roots In Sign.
+                </p>
+                <div class="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
+                    <a href="/register" class="bg-white text-indigo-700 hover:bg-gray-100 font-semibold py-3 px-8 rounded-md shadow-md transition duration-300 ease-in-out text-lg">Get Started Free</a>
+                    <a href="#" class="bg-transparent border-2 border-white hover:bg-white hover:text-indigo-700 text-white font-semibold py-3 px-8 rounded-md transition duration-300 ease-in-out text-lg">Contact Sales</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="bg-gray-800 text-gray-300 py-12">
+           <div class="container mx-auto px-6">
+                 <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                    <div>
+                        <div class="flex items-center mb-4">
+                            <svg class="w-8 h-8 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11" />
+                            </svg>
+                            <span class="text-xl font-bold ml-2 text-indigo-400">Roots In Sign</span>
+                        </div>
+                        <p class="text-sm">Breaking communication barriers with cutting-edge AI technology.</p>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold mb-4">Product</h3>
+                        <ul class="space-y-2 text-sm">
+                            <li><a href="#features" class="hover:text-indigo-400 transition duration-300">Features</a></li>
+                            <li><a href="#" class="hover:text-indigo-400 transition duration-300">Pricing</a></li>
+                            <li><a href="#" class="hover:text-indigo-400 transition duration-300">FAQ</a></li>
+                            <li><a href="#" class="hover:text-indigo-400 transition duration-300">Download</a></li>
+                        </ul>
+                    </div>
+                     <div>
+                        <h3 class="text-lg font-semibold mb-4">Company</h3>
+                        <ul class="space-y-2 text-sm">
+                            <li><a href="#" class="hover:text-indigo-400 transition duration-300">About Us</a></li>
+                            <li><a href="#" class="hover:text-indigo-400 transition duration-300">Careers</a></li>
+                            <li><a href="#" class="hover:text-indigo-400 transition duration-300">Blog</a></li>
+                            <li><a href="#" class="hover:text-indigo-400 transition duration-300">Contact</a></li>
+                        </ul>
+                    </div>
+                     <div>
+                        <h3 class="text-lg font-semibold mb-4">Legal</h3>
+                        <ul class="space-y-2 text-sm">
+                            <li><a href="#" class="hover:text-indigo-400 transition duration-300">Privacy Policy</a></li>
+                            <li><a href="#" class="hover:text-indigo-400 transition duration-300">Terms of Service</a></li>
+                            <li><a href="#" class="hover:text-indigo-400 transition duration-300">Cookie Policy</a></li>
+                            <li><a href="#" class="hover:text-indigo-400 transition duration-300">GDPR</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="border-t border-gray-700 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
+                    <p class="text-sm">© 2025 Roots In Sign. All rights reserved.</p>
+                    <div class="flex space-x-4 mt-4 md:mt-0">
+                        <!-- Social Icons -->
+                         <a href="#" aria-label="Facebook" class="text-gray-400 hover:text-indigo-400 transition duration-300">
+                            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path fill-rule="evenodd" d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" clip-rule="evenodd" />
+                            </svg>
+                        </a>
+                         <a href="#" aria-label="Twitter" class="text-gray-400 hover:text-indigo-400 transition duration-300">
+                            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.072 4.072 0 012.8 9.713v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.84" />
+                            </svg>
+                        </a>
+                         <a href="#" aria-label="Github" class="text-gray-400 hover:text-indigo-400 transition duration-300">
+                            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd" />
+                            </svg>
+                        </a>
+                        <a href="#" aria-label="Dribbble" class="text-gray-400 hover:text-indigo-400 transition duration-300">
+                             <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path fill-rule="evenodd" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c5.51 0 10-4.48 10-10S17.51 2 12 2zm6.605 4.61a8.502 8.502 0 011.93 5.314c-.281-.054-3.101-.629-5.943-.271-.065-.141-.12-.293-.184-.445a25.416 25.416 0 00-.564-1.236c3.145-1.28 4.577-3.124 4.761-3.362zM12 3.475c2.17 0 4.154.813 5.662 2.148-.152.216-1.443 1.941-4.48 3.08-1.399-2.57-2.95-4.675-3.189-5A8.687 8.687 0 0112 3.475zm-3.633.803a53.896 53.896 0 013.167 4.935c-3.992 1.063-7.517 1.04-7.896 1.04a8.581 8.581 0 014.729-5.975zM3.453 12.01v-.21c.37.01 4.512.065 8.775-1.215.25.477.477.965.694 1.453-.109.033-.228.065-.336.098-4.404 1.42-6.747 5.303-6.942 5.629a8.522 8.522 0 01-2.19-5.705zM12 20.547a8.482 8.482 0 01-5.239-1.8c.152-.315 1.888-3.656 6.703-5.337.022-.01.033-.01.054-.022a35.318 35.318 0 011.823 6.475 8.4 8.4 0 01-3.341.684zm4.761-1.465c-.086-.52-.542-3.015-1.659-6.084 2.679-.423 5.022.271 5.314.369a8.468 8.468 0 01-3.655 5.715z" clip-rule="evenodd" />
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Consolidated Scripts -->
+    <script>
+        // Wait for page to fully load to ensure all elements are available
+        window.addEventListener('load', function() {
+            console.log('Page loaded, initializing scripts...');
+
+            // --- Dark Mode Toggle ---
+            const themeToggleBtns = document.querySelectorAll('#theme-toggle, #mobile-theme-toggle');
+            const bodyElement = document.body;
+
+            // Function to apply theme
+            const applyTheme = (isDark) => {
+                console.log(`Applying theme: ${isDark ? 'Dark' : 'Light'}`);
+                if (isDark) {
+                    bodyElement.classList.add('dark');
+                    localStorage.setItem('darkMode', 'true');
+                } else {
+                    bodyElement.classList.remove('dark');
+                    localStorage.setItem('darkMode', 'false');
+                }
+            };
+
+            // Check initial theme preference (localStorage -> System Preference -> Default Light)
+            const checkAndApplyInitialTheme = () => {
+                const storedPreference = localStorage.getItem('darkMode');
+                
+                if (storedPreference !== null) {
+                    // Use stored preference
+                    const isDark = storedPreference === 'true';
+                    console.log(`Using stored theme preference: ${isDark ? 'Dark' : 'Light'}`);
+                    applyTheme(isDark);
+                } else {
+                    // Use system preference
+                    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                    console.log(`Using system theme preference: ${systemPrefersDark ? 'Dark' : 'Light'}`);
+                    applyTheme(systemPrefersDark);
+                }
+            };
+            
+            // Apply initial theme
+            checkAndApplyInitialTheme();
+
+            // Add event listeners to toggle buttons
+            themeToggleBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const isCurrentlyDark = bodyElement.classList.contains('dark');
+                    console.log(`Toggle clicked. Switching from ${isCurrentlyDark ? 'Dark' : 'Light'} to ${!isCurrentlyDark ? 'Dark' : 'Light'}`);
+                    applyTheme(!isCurrentlyDark);
+                });
+            });
+
+            // Listen for system theme changes
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+                // Only apply if no stored preference exists
+                if (localStorage.getItem('darkMode') === null) {
+                    console.log(`System theme changed to: ${e.matches ? 'Dark' : 'Light'}`);
+                    applyTheme(e.matches);
+                }
+            });
+
+            // --- Mobile Menu Toggle ---
+            const mobileMenuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+
+            if (mobileMenuButton && mobileMenu) {
+                mobileMenuButton.addEventListener('click', () => {
+                    const isHidden = mobileMenu.classList.toggle('hidden');
+                    mobileMenuButton.setAttribute('aria-expanded', String(!isHidden));
+                    mobileMenu.setAttribute('aria-hidden', String(isHidden));
+                });
+                
+                // Close menu when clicking links
+                mobileMenu.querySelectorAll('a').forEach(link => {
+                    link.addEventListener('click', () => {
+                        // Check if the link is an internal page link (starts with #)
+                        if (!link.getAttribute('href').startsWith('#') || mobileMenu.classList.contains('hidden')) {
+                           return; // Don't close for section links if already open, or if external
+                        }
+                        mobileMenu.classList.add('hidden');
+                        mobileMenuButton.setAttribute('aria-expanded', 'false');
+                        mobileMenu.setAttribute('aria-hidden', 'true');
+                    });
+                });
+            }
+
+            // --- Demo Video Play Button ---
+            const playDemoButton = document.getElementById('play-demo-button');
+            const demoVideoContainer = document.getElementById('demo-video-container');
+            const demoPlaceholderImage = document.getElementById('demo-placeholder-image');
+            const demoPlayOverlay = document.getElementById('demo-play-overlay');
+            const youtubeVideoId = 'dQw4w9WgXcQ'; // Example ID (Rick Astley)
+
+            if (playDemoButton && demoVideoContainer && demoPlaceholderImage && demoPlayOverlay) {
+                playDemoButton.addEventListener('click', () => {
+                    // Hide placeholder and overlay
+                    demoPlaceholderImage.style.display = 'none';
+                    demoPlayOverlay.style.display = 'none';
+
+                    // Create and append iframe
+                    const iframe = document.createElement('iframe');
+                    iframe.setAttribute('src', `img/vid.mp4`);
+                    iframe.setAttribute('title', 'Roots In Sign Demo Video');
+                    iframe.setAttribute('frameborder', '0');
+                    iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');
+                    iframe.setAttribute('allowfullscreen', '');
+                    iframe.classList.add('absolute', 'top-0', 'left-0', 'w-full', 'h-full');
+                    demoVideoContainer.appendChild(iframe);
+                });
+            }
+            
+            // Add smooth scroll for internal links
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const targetId = this.getAttribute('href');
+                    const targetElement = document.querySelector(targetId);
+                    if(targetElement) {
+                        targetElement.scrollIntoView({
+                            behavior: 'smooth'
+                        });
+                    }
+                });
+            });
+            
+             // Update 'Get Started' buttons to point to '/register' route
+            const getStartedButtons = document.querySelectorAll('a[href="#"][class*="Get Started"]'); // Adjust selector if needed
+            getStartedButtons.forEach(button => {
+                 // Check if it's the hero button or CTA button based on text maybe, or add specific IDs
+                 if (button.textContent.includes("Get Started") || button.textContent.includes("Get Started Free")) {
+                      button.setAttribute('href', '/register');
+                 }
+            });
+            
+        });
     </script>
-    {% endraw %} <!-- END Jinja Raw Block -->
-
 </body>
 </html>
-<!-- END OF FILE app.html -->
+--- END OF FILE index.html ---
