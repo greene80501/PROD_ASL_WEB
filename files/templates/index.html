@@ -130,14 +130,14 @@
                         <div class="relative w-full max-w-md">
                             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl overflow-hidden">
                                 <div class="p-2">
-                                    <img src="https://placehold.co/500x300/EEE/31343C" alt="Sign language translation demo" class="rounded-lg w-full" />
+                                    <img src="img/ASL_BOT.png" alt="Sign language translation demo" class="rounded-lg w-full" />
                                     <div class="absolute top-4 left-4 bg-red-500 text-white px-3 py-1 rounded-full text-xs font-medium">
                                         Live Translation
                                     </div>
                                 </div>
                                 <div class="p-4 bg-gray-50 dark:bg-gray-700">
                                     <p class="text-gray-800 dark:text-gray-200 font-medium">
-                                        "Hello, how are you today?"
+                                        "a"
                                     </p>
                                 </div>
                             </div>
@@ -317,7 +317,7 @@
                     </div>
                      <div class="relative">
                         <div class="bg-indigo-100 dark:bg-indigo-900/30 rounded-xl p-8">
-                            <img src="https://placehold.co/500x400/AFA8FF/1A202C" alt="AI technology visualization" class="rounded-lg shadow-lg w-full" />
+                            <img src="img/ASL.gif" alt="AI technology visualization" class="rounded-lg shadow-lg w-full" />
                             <div class="absolute -top-4 -right-4 bg-indigo-600 text-white p-4 rounded-lg shadow-lg">
                                 <div class="text-3xl font-bold">99%</div>
                                 <div class="text-sm">Translation Accuracy</div>
@@ -340,7 +340,7 @@
                     <!-- Video Container -->
                     <div id="demo-video-container" class="relative aspect-w-16 aspect-h-9 bg-black">
                         <!-- Placeholder Image -->
-                        <img id="demo-placeholder-image" src="https://placehold.co/800x450/1A202C/E2E8F0?text=Click+to+Play+Demo" alt="Demo video placeholder" class="absolute inset-0 w-full h-full object-cover" />
+                        <img id="demo-placeholder-image" src="img/vid.mp4" alt="Demo video placeholder" class="absolute inset-0 w-full h-full object-cover" />
                         <!-- Play Button Overlay -->
                         <div id="demo-play-overlay" class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 cursor-pointer">
                             <button id="play-demo-button" aria-label="Play demo video" class="w-20 h-20 bg-indigo-600 rounded-full flex items-center justify-center hover:bg-indigo-700 transition duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
@@ -590,7 +590,7 @@
 
                     // Create and append iframe
                     const iframe = document.createElement('iframe');
-                    iframe.setAttribute('src', `https://www.youtube.com/embed/${youtubeVideoId}?autoplay=1&rel=0&modestbranding=1`);
+                    iframe.setAttribute('src', `img/vid.mp4`);
                     iframe.setAttribute('title', 'Roots In Sign Demo Video');
                     iframe.setAttribute('frameborder', '0');
                     iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');
