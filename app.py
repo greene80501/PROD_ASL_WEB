@@ -1,630 +1,542 @@
+# --- START OF FILE app.py ---
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Roots In Sign - Breaking Communication Barriers</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Add explicit Tailwind dark mode configuration -->
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-        }
-    </script>
-    <style>
-        html {
-            scroll-behavior: smooth; /* Add smooth scrolling */
-        }
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f9fafb;
-            transition: background-color 0.3s, color 0.3s;
-        }
-        body.dark {
-            background-color: #1a202c;
-            color: #e2e8f0;
-        }
-        .hero-gradient {
-            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-        }
-        .feature-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-        }
-        /* Basic mobile menu transition (optional) */
-        #mobile-menu {
-            transition: transform 0.3s ease-in-out;
-        }
-        #mobile-menu.hidden {
-           /* Example using opacity/transform for transition */
-           /* opacity: 0; transform: translateY(-10px); */
-           /* Or just rely on adding/removing from DOM or simple hidden */
-        }
-        /* Ensure aspect ratio utilities work */
-        @tailwind base;
-        @tailwind components;
-        @tailwind utilities;
+from flask import Flask, request, jsonify, render_template, redirect, url_for, session, Response, stream_with_context
+import base64
+from io import BytesIO
+from PIL import Image
+import files.api.predict as predict_lib # Assuming predict.py is in files/api/
+import tensorflow as tf
+import os
+import datetime
+import uuid
+import traceback
+import tempfile
+import re # Import regular expressions for filename parsing
+import glob # Import glob for file pattern matching
 
-        @layer utilities {
-         .aspect-w-16 { aspect-ratio: 16 / 9; }
-         .aspect-h-9 { /* not needed if aspect-ratio is supported */ }
-        }
-    </style>
-</head>
-<body>
-    <div class="relative">
-        <!-- Navigation -->
-        <nav class="bg-white dark:bg-gray-800 shadow-md py-4 sticky top-0 z-50">
-            <div class="container mx-auto px-6 flex items-center justify-between">
-                <div class="flex items-center">
-                    <svg class="w-10 h-10 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11" />
-                    </svg>
-                    <span class="text-2xl font-bold ml-2 text-indigo-700 dark:text-indigo-400">Roots In Sign</span>
-                </div>
-                <!-- Desktop Menu -->
-                <div class="hidden md:flex items-center space-x-4">
-                    <a href="#features" class="text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium">Features</a>
-                    <a href="#how-it-works" class="text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium">How It Works</a>
-                    <a href="#technology" class="text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium">Technology</a>
-                    
-                    <!-- CORRECTED LINK HERE -->
-                    <a href="/signin" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-md transition duration-300 ease-in-out">Sign In</a>
-                    
-                    <button
-                        id="theme-toggle"
-                        aria-label="Toggle dark mode"
-                        class="text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 focus:outline-none ml-2 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
-                    >
-                        <!-- Sun icon -->
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 block dark:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"> <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707.707M6.343 6.343l-.707.707m12.728 0l-.707-.707M6.343 17.657l-.707-.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /> </svg>
-                        <!-- Moon icon -->
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 hidden dark:block" fill="none" viewBox="0 0 24 24" stroke="currentColor"> <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /> </svg>
-                    </button>
-                </div>
-                <!-- Mobile Menu Buttons -->
-                <div class="md:hidden flex items-center space-x-2">
-                    <button
-                        id="mobile-theme-toggle"
-                        aria-label="Toggle dark mode"
-                        class="text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 focus:outline-none p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
-                    >
-                        <!-- Sun icon -->
-                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 block dark:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"> <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707.707M6.343 6.343l-.707.707m12.728 0l-.707-.707M6.343 17.657l-.707-.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /> </svg>
-                        <!-- Moon icon -->
-                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 hidden dark:block" fill="none" viewBox="0 0 24 24" stroke="currentColor"> <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /> </svg>
-                    </button>
-                    <button id="mobile-menu-button" aria-label="Open mobile menu" aria-expanded="false" class="text-gray-700 dark:text-gray-300 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                        </svg>
-                    </button>
-                </div>
-            </div>
-             <!-- Mobile Menu -->
-            <div id="mobile-menu" class="md:hidden hidden absolute top-full left-0 right-0 bg-white dark:bg-gray-800 shadow-lg py-2 z-40" aria-hidden="true">
-                <a href="#features" class="block px-6 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Features</a>
-                <a href="#how-it-works" class="block px-6 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">How It Works</a>
-                <a href="#technology" class="block px-6 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Technology</a>
-                
-                <!-- CORRECTED LINK HERE -->
-                <a href="/signin" class="block px-6 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Sign In</a>
-            </div>
-        </nav>
+# --- Imports for Spoken-to-Signed Feature ---
+# ... (keep existing imports)
+import sys
+# import subprocess # No longer needed as pose_to_video is removed
+import json
+from faster_whisper import WhisperModel
+from pose_format import Pose
+from pose_format.pose_visualizer import PoseVisualizer # Keep for GIF
+# Ensure the gloss_to_pose module is on the Python path.
+# You might need to adjust this path depending on your exact project structure
+# Assuming it's adjacent to the main script or installable
+try:
+    sys.path.append(os.path.join(os.getcwd(), "spoken-to-signed-translation", "spoken_to_signed", "gloss_to_pose"))
+    from concatenate import concatenate_poses
+except ImportError as e:
+    print(f"Warning: Could not import 'concatenate_poses'. Ensure 'gloss_to_pose' module is accessible: {e}")
+    # Define a dummy function if needed, or let it fail later
+    def concatenate_poses(poselist):
+        print("WARNING: Using dummy concatenate_poses function!")
+        if not poselist: return None # Or raise error
+        # Basic concatenation might involve just taking the first pose or raising an error
+        # For simplicity, let's just return the first pose if it exists
+        return poselist[0]
+# --- End Imports for Spoken-to-Signed Feature ---
 
-        <!-- Hero Section -->
-        <div class="hero-gradient text-white py-20">
-            <div class="container mx-auto px-6">
-                <div class="flex flex-col md:flex-row items-center">
-                    <div class="md:w-1/2 mb-10 md:mb-0">
-                        <h1 class="text-4xl md:text-5xl font-bold leading-tight mb-4">Breaking Communication Barriers</h1>
-                        <p class="text-xl mb-8">Roots In Sign uses cutting-edge AI to translate between sign language and spoken language in real-time, creating seamless communication for everyone.</p>
-                        <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
-                            <a href="/register" class="bg-white text-indigo-700 hover:bg-gray-100 font-semibold py-3 px-6 rounded-md shadow-md transition duration-300 ease-in-out text-center">Get Started</a>
-                            <a href="#demo" class="bg-transparent border-2 border-white hover:bg-white hover:text-indigo-700 text-white font-semibold py-3 px-6 rounded-md transition duration-300 ease-in-out text-center">Watch Demo</a>
-                        </div>
-                    </div>
-                    <div class="md:w-1/2 flex justify-center">
-                        <div class="relative w-full max-w-md">
-                            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl overflow-hidden">
-                                <div class="p-2">
-                                    <img src="img/ASL_BOT.png" alt="Sign language translation demo" class="rounded-lg w-full" />
-                                    <div class="absolute top-4 left-4 bg-red-500 text-white px-3 py-1 rounded-full text-xs font-medium">
-                                        Live Translation
-                                    </div>
-                                </div>
-                                <div class="p-4 bg-gray-50 dark:bg-gray-700">
-                                    <p class="text-gray-800 dark:text-gray-200 font-medium">
-                                        "a"
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
 
-        <!-- Features Section -->
-        <section id="features" class="py-16 bg-white dark:bg-gray-800">
-            <div class="container mx-auto px-6">
-                <h2 class="text-3xl font-bold text-center text-gray-800 dark:text-gray-200 mb-12">Powerful Features</h2>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    <!-- Feature 1 -->
-                     <div class="feature-card bg-white dark:bg-gray-700 rounded-xl shadow-lg p-6 transition duration-300 ease-in-out border border-gray-200 dark:border-gray-600">
-                        <div class="w-12 h-12 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center mb-4">
-                            <svg class="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-                            </svg>
-                        </div>
-                        <h3 class="text-xl font-semibold mb-2 text-indigo-600 dark:text-indigo-400">Real-time Translation</h3>
-                        <p class="text-gray-600 dark:text-gray-300">Instantly translate between sign language and text with minimal delay, enabling fluid conversations.</p>
-                    </div>
-                    <!-- Feature 2 -->
-                    <div class="feature-card bg-white dark:bg-gray-700 rounded-xl shadow-lg p-6 transition duration-300 ease-in-out border border-gray-200 dark:border-gray-600">
-                        <div class="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mb-4">
-                            <svg class="w-6 h-6 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                            </svg>
-                        </div>
-                        <h3 class="text-xl font-semibold mb-2 text-green-600 dark:text-green-400">Bidirectional Communication</h3>
-                        <p class="text-gray-600 dark:text-gray-300">Speak or sign - communicate both ways seamlessly with our advanced two-way translation system.</p>
-                    </div>
-                    <!-- Feature 3 -->
-                    <div class="feature-card bg-white dark:bg-gray-700 rounded-xl shadow-lg p-6 transition duration-300 ease-in-out border border-gray-200 dark:border-gray-600">
-                        <div class="w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center mb-4">
-                            <svg class="w-6 h-6 text-purple-600 dark:text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                            </svg>
-                        </div>
-                        <h3 class="text-xl font-semibold mb-2 text-purple-600 dark:text-purple-400">Advanced AI Technology</h3>
-                        <p class="text-gray-600 dark:text-gray-300">Powered by state-of-the-art machine learning models for accurate and nuanced translations.</p>
-                    </div>
-                </div>
-            </div>
-        </section>
+# --- Database & Auth Setup ---
+from flask_sqlalchemy import SQLAlchemy
+from flask_login import LoginManager, UserMixin, login_user, logout_user, current_user, login_required
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask_migrate import Migrate # For database migrations
 
-        <!-- How It Works Section -->
-        <section id="how-it-works" class="py-16 bg-gray-50 dark:bg-gray-900">
-            <div class="container mx-auto px-6">
-                 <h2 class="text-3xl font-bold text-center text-gray-800 dark:text-gray-200 mb-12">How It Works</h2>
-                 <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
-                    <!-- Sign to Text -->
-                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
-                        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
-                            <h3 class="text-2xl font-bold text-indigo-700 dark:text-indigo-400 mb-2">Sign to Text Translation</h3>
-                            <p class="text-gray-600 dark:text-gray-300">Convert sign language into written text instantly.</p>
-                        </div>
-                        <div class="p-6">
-                            <ol class="space-y-4">
-                                <li class="flex items-start">
-                                    <div class="flex-shrink-0 w-8 h-8 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center mr-3 mt-1">
-                                        <span class="text-indigo-600 dark:text-indigo-400 font-semibold">1</span>
-                                    </div>
-                                    <div>
-                                        <h4 class="font-medium text-gray-800 dark:text-gray-200">Webcam Capture</h4>
-                                        <p class="text-gray-600 dark:text-gray-400">Your webcam captures sign language gestures in real-time</p>
-                                    </div>
-                                </li>
-                                <li class="flex items-start">
-                                    <div class="flex-shrink-0 w-8 h-8 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center mr-3 mt-1">
-                                        <span class="text-indigo-600 dark:text-indigo-400 font-semibold">2</span>
-                                    </div>
-                                    <div>
-                                        <h4 class="font-medium text-gray-800 dark:text-gray-200">AI Analysis</h4>
-                                        <p class="text-gray-600 dark:text-gray-400">Our algorithm analyzes hand movements and body language</p>
-                                    </div>
-                                </li>
-                                <li class="flex items-start">
-                                    <div class="flex-shrink-0 w-8 h-8 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center mr-3 mt-1">
-                                        <span class="text-indigo-600 dark:text-indigo-400 font-semibold">3</span>
-                                    </div>
-                                    <div>
-                                        <h4 class="font-medium text-gray-800 dark:text-gray-200">Machine Learning Translation</h4>
-                                        <p class="text-gray-600 dark:text-gray-400">Advanced ML models translate signs to accurate text</p>
-                                    </div>
-                                </li>
-                                <li class="flex items-start">
-                                    <div class="flex-shrink-0 w-8 h-8 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center mr-3 mt-1">
-                                        <span class="text-indigo-600 dark:text-indigo-400 font-semibold">4</span>
-                                    </div>
-                                    <div>
-                                        <h4 class="font-medium text-gray-800 dark:text-gray-200">Instant Output</h4>
-                                        <p class="text-gray-600 dark:text-gray-400">Text appears on screen immediately for seamless communication</p>
-                                    </div>
-                                </li>
-                            </ol>
-                        </div>
-                    </div>
+# --- Configuration ---
+# Configure the template folder relative to the app.py file location
+TEMPLATE_FOLDER = os.path.join(os.path.dirname(__file__), 'files', 'templates')
+# Point static folder to 'files/static'
+STATIC_FOLDER_PATH = os.path.join(os.path.dirname(__file__), 'files', 'static')
+app = Flask(__name__, template_folder=TEMPLATE_FOLDER, static_folder=STATIC_FOLDER_PATH)
+# Flask will automatically map the URL path '/static' to the contents of STATIC_FOLDER_PATH
 
-                    <!-- Speech to Sign -->
-                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
-                        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
-                            <h3 class="text-2xl font-bold text-indigo-700 dark:text-indigo-400 mb-2">Speech to ASL Translation</h3>
-                            <p class="text-gray-600 dark:text-gray-300">Transform spoken words into comprehensive sign language.</p>
-                        </div>
-                        <div class="p-6">
-                            <ol class="space-y-4">
-                                <li class="flex items-start">
-                                    <div class="flex-shrink-0 w-8 h-8 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center mr-3 mt-1">
-                                        <span class="text-indigo-600 dark:text-indigo-400 font-semibold">1</span>
-                                    </div>
-                                    <div>
-                                        <h4 class="font-medium text-gray-800 dark:text-gray-200">Speech Capture</h4>
-                                        <p class="text-gray-600 dark:text-gray-400">Your microphone captures spoken language</p>
-                                    </div>
-                                </li>
-                                <li class="flex items-start">
-                                    <div class="flex-shrink-0 w-8 h-8 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center mr-3 mt-1">
-                                        <span class="text-indigo-600 dark:text-indigo-400 font-semibold">2</span>
-                                    </div>
-                                    <div>
-                                        <h4 class="font-medium text-gray-800 dark:text-gray-200">Language Processing</h4>
-                                        <p class="text-gray-600 dark:text-gray-400">Natural language processing analyzes speech content</p>
-                                    </div>
-                                </li>
-                                <li class="flex items-start">
-                                    <div class="flex-shrink-0 w-8 h-8 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center mr-3 mt-1">
-                                        <span class="text-indigo-600 dark:text-indigo-400 font-semibold">3</span>
-                                    </div>
-                                    <div>
-                                        <h4 class="font-medium text-gray-800 dark:text-gray-200">Sign Generation</h4>
-                                        <p class="text-gray-600 dark:text-gray-400">AI generates corresponding sign language movements</p>
-                                    </div>
-                                </li>
-                                <li class="flex items-start">
-                                    <div class="flex-shrink-0 w-8 h-8 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center mr-3 mt-1">
-                                        <span class="text-indigo-600 dark:text-indigo-400 font-semibold">4</span>
-                                    </div>
-                                    <div>
-                                        <h4 class="font-medium text-gray-800 dark:text-gray-200">Avatar Rendering</h4>
-                                        <p class="text-gray-600 dark:text-gray-400">Digital avatar performs the sign language translation</p>
-                                    </div>
-                                </li>
-                            </ol>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
+# **IMPORTANT: Set a strong SECRET_KEY for production!**
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'a_very_insecure_default_key_for_dev_12345') # Added more default chars for basic security
 
-        <!-- Technology Section -->
-        <section id="technology" class="py-16 bg-white dark:bg-gray-800">
-             <div class="container mx-auto px-6">
-                <h2 class="text-3xl font-bold text-center text-gray-800 dark:text-gray-200 mb-12">Our Technology</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-                    <div>
-                        <h3 class="text-2xl font-bold text-indigo-700 dark:text-indigo-400 mb-4">Cutting-edge AI</h3>
-                        <p class="text-gray-600 dark:text-gray-300 mb-6">
-                            Roots In Sign leverages state-of-the-art machine learning models to provide accurate, contextual translations between sign language and text.
-                        </p>
-                        <div class="space-y-4">
-                             <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                                <h4 class="font-semibold text-gray-800 dark:text-gray-200 mb-2">Advanced Computer Vision</h4>
-                                <p class="text-gray-600 dark:text-gray-400">Our technology tracks and interprets complex hand movements, facial expressions, and body language with high precision.</p>
-                            </div>
-                            <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                                <h4 class="font-semibold text-gray-800 dark:text-gray-200 mb-2">Natural Language Processing</h4>
-                                <p class="text-gray-600 dark:text-gray-400">Sophisticated language models understand context and nuance for more accurate translations.</p>
-                            </div>
-                            <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                                <h4 class="font-semibold text-gray-800 dark:text-gray-200 mb-2">Real-time Processing</h4>
-                                <p class="text-gray-600 dark:text-gray-400">Optimized algorithms ensure fast, responsive translations with minimal latency.</p>
-                            </div>
-                        </div>
-                    </div>
-                     <div class="relative">
-                        <div class="bg-indigo-100 dark:bg-indigo-900/30 rounded-xl p-8">
-                            <img src="img/ASL.gif" alt="AI technology visualization" class="rounded-lg shadow-lg w-full" />
-                            <div class="absolute -top-4 -right-4 bg-indigo-600 text-white p-4 rounded-lg shadow-lg">
-                                <div class="text-3xl font-bold">99%</div>
-                                <div class="text-sm">Translation Accuracy</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
+# --- MySQL (XAMPP) Database Configuration ---
+# !!! REPLACE placeholders with your actual MySQL details !!!
+db_username = os.environ.get('DB_USER', 'sign2speak_user')      # Use environment variable or default
+db_password = os.environ.get('DB_PASS', 'Sv227199')   # Use environment variable or default
+db_host = os.environ.get('DB_HOST', 'localhost')              # Use environment variable or default
+db_port = os.environ.get('DB_PORT', '3306')                   # Use environment variable or default
+database_name = os.environ.get('DB_NAME', 'sign2speak_db')     # Use environment variable or default
 
-        <!-- Demo Section -->
-        <section id="demo" class="py-16 bg-gray-50 dark:bg-gray-900">
-            <div class="container mx-auto px-6">
-                <h2 class="text-3xl font-bold text-center text-gray-800 dark:text-gray-200 mb-12">See It In Action</h2>
-                <div class="max-w-4xl mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
-                    <div class="p-6 border-b border-gray-200 dark:border-gray-700">
-                        <h3 class="text-2xl font-bold text-indigo-700 dark:text-indigo-400 mb-2">Roots In Sign Demo</h3>
-                        <p class="text-gray-600 dark:text-gray-300">Watch how our technology bridges the communication gap in real-time.</p>
-                    </div>
-                    <!-- Video Container -->
-                    <div id="demo-video-container" class="relative aspect-w-16 aspect-h-9 bg-black">
-                        <!-- Placeholder Image -->
-                        <img id="demo-placeholder-image" src="img/vid.mp4" alt="Demo video placeholder" class="absolute inset-0 w-full h-full object-cover" />
-                        <!-- Play Button Overlay -->
-                        <div id="demo-play-overlay" class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 cursor-pointer">
-                            <button id="play-demo-button" aria-label="Play demo video" class="w-20 h-20 bg-indigo-600 rounded-full flex items-center justify-center hover:bg-indigo-700 transition duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                                <svg class="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M8 5v14l11-7z" />
-                                </svg>
-                            </button>
-                        </div>
-                         <!-- YouTube Iframe will be inserted here by JS -->
-                    </div>
-                    <div class="p-6">
-                        <p class="text-gray-700 dark:text-gray-300">
-                            This demo showcases both Sign-to-Text and Speech-to-Sign capabilities of our platform, demonstrating how Roots In Sign can facilitate smooth conversations between sign language users and non-signers.
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </section>
+app.config['SQLALCHEMY_DATABASE_URI'] = (
+    f'mysql+mysqlconnector://{db_username}:{db_password}@{db_host}:{db_port}/{database_name}'
+)
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-        <!-- Testimonials Section -->
-        <section class="py-16 bg-white dark:bg-gray-800">
-           <div class="container mx-auto px-6">
-                <h2 class="text-3xl font-bold text-center text-gray-800 dark:text-gray-200 mb-12">What Our Users Say</h2>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    <!-- Testimonial 1 -->
-                     <div class="bg-gray-50 dark:bg-gray-700 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-600">
-                        <div class="flex items-center mb-4">
-                            <div class="w-12 h-12 bg-indigo-100 dark:bg-indigo-800 rounded-full flex items-center justify-center text-xl font-bold text-indigo-600 dark:text-indigo-300 flex-shrink-0"> JD </div>
-                            <div class="ml-4">
-                                <h4 class="font-semibold text-gray-800 dark:text-gray-200">Jane Doe</h4>
-                                <p class="text-gray-500 dark:text-gray-400 text-sm">ASL Interpreter</p>
-                            </div>
-                        </div>
-                        <p class="text-gray-600 dark:text-gray-300 italic"> "Roots In Sign has revolutionized my work as an interpreter. The accuracy is astonishing, and it's helping me reach more people than ever before." </p>
-                        <div class="mt-4 flex text-yellow-400"> <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"> <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /> </svg> <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"> <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /> </svg> <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"> <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /> </svg> <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"> <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /> </svg> <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"> <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /> </svg> </div>
-                    </div>
-                    <!-- Testimonial 2 -->
-                    <div class="bg-gray-50 dark:bg-gray-700 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-600">
-                         <div class="flex items-center mb-4">
-                            <div class="w-12 h-12 bg-indigo-100 dark:bg-indigo-800 rounded-full flex items-center justify-center text-xl font-bold text-indigo-600 dark:text-indigo-300 flex-shrink-0"> MS </div>
-                            <div class="ml-4">
-                                <h4 class="font-semibold text-gray-800 dark:text-gray-200">Michael Smith</h4>
-                                <p class="text-gray-500 dark:text-gray-400 text-sm">Deaf Community Advocate</p>
-                            </div>
-                        </div>
-                        <p class="text-gray-600 dark:text-gray-300 italic"> "For the first time, I can have spontaneous conversations with hearing people without an interpreter present. Roots In Sign is life-changing technology." </p>
-                        <div class="mt-4 flex text-yellow-400"> <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"> <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /> </svg> <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"> <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /> </svg> <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"> <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /> </svg> <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"> <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /> </svg> <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"> <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /> </svg> </div>
-                    </div>
-                     <!-- Testimonial 3 -->
-                    <div class="bg-gray-50 dark:bg-gray-700 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-600">
-                         <div class="flex items-center mb-4">
-                            <div class="w-12 h-12 bg-indigo-100 dark:bg-indigo-800 rounded-full flex items-center justify-center text-xl font-bold text-indigo-600 dark:text-indigo-300 flex-shrink-0"> AT </div>
-                            <div class="ml-4">
-                                <h4 class="font-semibold text-gray-800 dark:text-gray-200">Anna Thompson</h4>
-                                <p class="text-gray-500 dark:text-gray-400 text-sm">Educator</p>
-                            </div>
-                        </div>
-                        <p class="text-gray-600 dark:text-gray-300 italic"> "In my classroom, Roots In Sign has created an inclusive environment where all students can participate equally, regardless of hearing ability." </p>
-                        <div class="mt-4 flex text-yellow-400"> <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"> <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /> </svg> <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"> <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /> </svg> <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"> <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /> </svg> <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"> <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /> </svg> <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"> <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /> </svg> </div>
-                    </div>
-                </div>
-            </div>
-        </section>
+# Initialize extensions
+db = SQLAlchemy(app)
+migrate = Migrate(app, db)
+login_manager = LoginManager(app)
+login_manager.login_view = 'signin_page'
+login_manager.login_message = "Please log in to access this page."
+login_manager.login_message_category = 'info'
 
-        <!-- Call to Action Section -->
-        <section id="cta" class="py-16 bg-indigo-600">
-           <div class="container mx-auto px-6 text-center">
-                <h2 class="text-3xl font-bold text-white mb-4">Ready to Break Communication Barriers?</h2>
-                <p class="text-indigo-100 text-xl mb-8 max-w-3xl mx-auto">
-                    Join thousands of users who are already experiencing seamless communication with Roots In Sign.
-                </p>
-                <div class="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-                    <a href="/register" class="bg-white text-indigo-700 hover:bg-gray-100 font-semibold py-3 px-8 rounded-md shadow-md transition duration-300 ease-in-out text-lg">Get Started Free</a>
-                    <a href="#" class="bg-transparent border-2 border-white hover:bg-white hover:text-indigo-700 text-white font-semibold py-3 px-8 rounded-md transition duration-300 ease-in-out text-lg">Contact Sales</a>
-                </div>
-            </div>
-        </section>
+# --- User Model ---
+class User(UserMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password_hash = db.Column(db.String(256), nullable=False)
+    full_name = db.Column(db.String(100), nullable=True)
 
-        <!-- Footer -->
-        <footer class="bg-gray-800 text-gray-300 py-12">
-           <div class="container mx-auto px-6">
-                 <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
-                    <div>
-                        <div class="flex items-center mb-4">
-                            <svg class="w-8 h-8 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11" />
-                            </svg>
-                            <span class="text-xl font-bold ml-2 text-indigo-400">Roots In Sign</span>
-                        </div>
-                        <p class="text-sm">Breaking communication barriers with cutting-edge AI technology.</p>
-                    </div>
-                    <div>
-                        <h3 class="text-lg font-semibold mb-4">Product</h3>
-                        <ul class="space-y-2 text-sm">
-                            <li><a href="#features" class="hover:text-indigo-400 transition duration-300">Features</a></li>
-                            <li><a href="#" class="hover:text-indigo-400 transition duration-300">Pricing</a></li>
-                            <li><a href="#" class="hover:text-indigo-400 transition duration-300">FAQ</a></li>
-                            <li><a href="#" class="hover:text-indigo-400 transition duration-300">Download</a></li>
-                        </ul>
-                    </div>
-                     <div>
-                        <h3 class="text-lg font-semibold mb-4">Company</h3>
-                        <ul class="space-y-2 text-sm">
-                            <li><a href="#" class="hover:text-indigo-400 transition duration-300">About Us</a></li>
-                            <li><a href="#" class="hover:text-indigo-400 transition duration-300">Careers</a></li>
-                            <li><a href="#" class="hover:text-indigo-400 transition duration-300">Blog</a></li>
-                            <li><a href="#" class="hover:text-indigo-400 transition duration-300">Contact</a></li>
-                        </ul>
-                    </div>
-                     <div>
-                        <h3 class="text-lg font-semibold mb-4">Legal</h3>
-                        <ul class="space-y-2 text-sm">
-                            <li><a href="#" class="hover:text-indigo-400 transition duration-300">Privacy Policy</a></li>
-                            <li><a href="#" class="hover:text-indigo-400 transition duration-300">Terms of Service</a></li>
-                            <li><a href="#" class="hover:text-indigo-400 transition duration-300">Cookie Policy</a></li>
-                            <li><a href="#" class="hover:text-indigo-400 transition duration-300">GDPR</a></li>
-                        </ul>
-                    </div>
-                </div>
-                <div class="border-t border-gray-700 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
-                    <p class="text-sm">© 2025 Roots In Sign. All rights reserved.</p>
-                    <div class="flex space-x-4 mt-4 md:mt-0">
-                        <!-- Social Icons -->
-                         <a href="#" aria-label="Facebook" class="text-gray-400 hover:text-indigo-400 transition duration-300">
-                            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                <path fill-rule="evenodd" d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" clip-rule="evenodd" />
-                            </svg>
-                        </a>
-                         <a href="#" aria-label="Twitter" class="text-gray-400 hover:text-indigo-400 transition duration-300">
-                            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                <path d="M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.072 4.072 0 012.8 9.713v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.84" />
-                            </svg>
-                        </a>
-                         <a href="#" aria-label="Github" class="text-gray-400 hover:text-indigo-400 transition duration-300">
-                            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                <path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd" />
-                            </svg>
-                        </a>
-                        <a href="#" aria-label="Dribbble" class="text-gray-400 hover:text-indigo-400 transition duration-300">
-                             <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                <path fill-rule="evenodd" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c5.51 0 10-4.48 10-10S17.51 2 12 2zm6.605 4.61a8.502 8.502 0 011.93 5.314c-.281-.054-3.101-.629-5.943-.271-.065-.141-.12-.293-.184-.445a25.416 25.416 0 00-.564-1.236c3.145-1.28 4.577-3.124 4.761-3.362zM12 3.475c2.17 0 4.154.813 5.662 2.148-.152.216-1.443 1.941-4.48 3.08-1.399-2.57-2.95-4.675-3.189-5A8.687 8.687 0 0112 3.475zm-3.633.803a53.896 53.896 0 013.167 4.935c-3.992 1.063-7.517 1.04-7.896 1.04a8.581 8.581 0 014.729-5.975zM3.453 12.01v-.21c.37.01 4.512.065 8.775-1.215.25.477.477.965.694 1.453-.109.033-.228.065-.336.098-4.404 1.42-6.747 5.303-6.942 5.629a8.522 8.522 0 01-2.19-5.705zM12 20.547a8.482 8.482 0 01-5.239-1.8c.152-.315 1.888-3.656 6.703-5.337.022-.01.033-.01.054-.022a35.318 35.318 0 011.823 6.475 8.4 8.4 0 01-3.341.684zm4.761-1.465c-.086-.52-.542-3.015-1.659-6.084 2.679-.423 5.022.271 5.314.369a8.468 8.468 0 01-3.655 5.715z" clip-rule="evenodd" />
-                            </svg>
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </footer>
-    </div>
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
 
-    <!-- Consolidated Scripts -->
-    <script>
-        // Wait for page to fully load to ensure all elements are available
-        window.addEventListener('load', function() {
-            console.log('Page loaded, initializing scripts...');
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
 
-            // --- Dark Mode Toggle ---
-            const themeToggleBtns = document.querySelectorAll('#theme-toggle, #mobile-theme-toggle');
-            const bodyElement = document.body;
+    def __repr__(self):
+        return f'<User {self.email}>'
 
-            // Function to apply theme
-            const applyTheme = (isDark) => {
-                console.log(`Applying theme: ${isDark ? 'Dark' : 'Light'}`);
-                if (isDark) {
-                    bodyElement.classList.add('dark');
-                    localStorage.setItem('darkMode', 'true');
-                } else {
-                    bodyElement.classList.remove('dark');
-                    localStorage.setItem('darkMode', 'false');
-                }
-            };
+# User loader function for Flask-Login
+@login_manager.user_loader
+def load_user(user_id):
+    try:
+        return User.query.get(int(user_id))
+    except (TypeError, ValueError):
+        return None
 
-            // Check initial theme preference (localStorage -> System Preference -> Default Light)
-            const checkAndApplyInitialTheme = () => {
-                const storedPreference = localStorage.getItem('darkMode');
-                
-                if (storedPreference !== null) {
-                    // Use stored preference
-                    const isDark = storedPreference === 'true';
-                    console.log(`Using stored theme preference: ${isDark ? 'Dark' : 'Light'}`);
-                    applyTheme(isDark);
-                } else {
-                    // Use system preference
-                    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                    console.log(`Using system theme preference: ${systemPrefersDark ? 'Dark' : 'Light'}`);
-                    applyTheme(systemPrefersDark);
-                }
-            };
-            
-            // Apply initial theme
-            checkAndApplyInitialTheme();
+# --- Path & Model Config ---
+BASE_DIR = os.path.dirname(__file__)
+MODEL_DIR = os.path.join(BASE_DIR, "files", "model")
+MODEL_NAME = "asl_model.keras"
+model_path = os.path.join(MODEL_DIR, MODEL_NAME)
+TMP_DIR = os.path.join(BASE_DIR, "files", "api", "tmp") # Base directory for sign-to-text frames
+TEMP_DIR_AUDIO = os.path.join(BASE_DIR, "temp") # Used for audio and temp pose
 
-            // Add event listeners to toggle buttons
-            themeToggleBtns.forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const isCurrentlyDark = bodyElement.classList.contains('dark');
-                    console.log(`Toggle clicked. Switching from ${isCurrentlyDark ? 'Dark' : 'Light'} to ${!isCurrentlyDark ? 'Dark' : 'Light'}`);
-                    applyTheme(!isCurrentlyDark);
-                });
-            });
+# --- Create Directories ---
+os.makedirs(TMP_DIR, exist_ok=True) # Ensure base temp directory exists
+os.makedirs(TEMP_DIR_AUDIO, exist_ok=True)
+# Ensure 'videos' subdirectory exists in static folder (for GIF output)
+VIDEOS_DIR = os.path.join(STATIC_FOLDER_PATH, "videos")
+os.makedirs(VIDEOS_DIR, exist_ok=True)
+print(f"Directory for generated GIFs/videos created/exists at: {VIDEOS_DIR}")
 
-            // Listen for system theme changes
-            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
-                // Only apply if no stored preference exists
-                if (localStorage.getItem('darkMode') === null) {
-                    console.log(`System theme changed to: ${e.matches ? 'Dark' : 'Light'}`);
-                    applyTheme(e.matches);
-                }
-            });
+# Base ASL pose directory path check (corrected path)
+ASL_POSE_DIR = os.path.join(BASE_DIR, "files", "static", "asl")
+if not os.path.isdir(ASL_POSE_DIR):
+    print(f"WARNING: ASL Pose directory not found at {ASL_POSE_DIR}. Spoken-to-signed feature will fail.")
+else:
+    print(f"ASL Pose directory found at: {ASL_POSE_DIR}")
 
-            // --- Mobile Menu Toggle ---
-            const mobileMenuButton = document.getElementById('mobile-menu-button');
-            const mobileMenu = document.getElementById('mobile-menu');
+# --- Keras ASL Model Loading (Sign-to-Text) ---
+loaded_model = None
+try:
+    if os.path.exists(model_path):
+        loaded_model = tf.keras.models.load_model(model_path, compile=False)
+        print(f"ASL Model loaded successfully from {model_path}")
+    else:
+        print(f"Error: ASL Model file not found at {model_path}. Prediction endpoint will not work.")
+except Exception as e:
+    print(f"Error loading ASL model from {model_path}: {e}. Prediction endpoint will not work.")
 
-            if (mobileMenuButton && mobileMenu) {
-                mobileMenuButton.addEventListener('click', () => {
-                    const isHidden = mobileMenu.classList.toggle('hidden');
-                    mobileMenuButton.setAttribute('aria-expanded', String(!isHidden));
-                    mobileMenu.setAttribute('aria-hidden', String(isHidden));
-                });
-                
-                // Close menu when clicking links
-                mobileMenu.querySelectorAll('a').forEach(link => {
-                    link.addEventListener('click', () => {
-                        // Check if the link is an internal page link (starts with #)
-                        if (!link.getAttribute('href').startsWith('#') || mobileMenu.classList.contains('hidden')) {
-                           return; // Don't close for section links if already open, or if external
-                        }
-                        mobileMenu.classList.add('hidden');
-                        mobileMenuButton.setAttribute('aria-expanded', 'false');
-                        mobileMenu.setAttribute('aria-hidden', 'true');
-                    });
-                });
-            }
+# --- Faster Whisper Model Loading (for Spoken-to-Signed GIF Feature) ---
+spoken_to_signed_model_size = "distil-small.en" # Smaller, faster model
+spoken_to_signed_model = None
+try:
+    # Consider trying 'cpu' and 'int8' for wider compatibility if 'auto' fails
+    spoken_to_signed_model = WhisperModel(spoken_to_signed_model_size, device="cpu", compute_type="int8")
+    print(f"Faster Whisper model '{spoken_to_signed_model_size}' loaded (cpu, int8).")
+except Exception as e:
+    print(f"Error loading faster-whisper model '{spoken_to_signed_model_size}': {e}")
+    print("Spoken-to-signed GIF generation endpoint /process will likely fail.")
 
-            // --- Demo Video Play Button ---
-            const playDemoButton = document.getElementById('play-demo-button');
-            const demoVideoContainer = document.getElementById('demo-video-container');
-            const demoPlaceholderImage = document.getElementById('demo-placeholder-image');
-            const demoPlayOverlay = document.getElementById('demo-play-overlay');
-            const youtubeVideoId = 'dQw4w9WgXcQ'; // Example ID (Rick Astley)
+# --- Helper function to pass auth status to templates ---
+@app.context_processor
+def inject_user():
+    return dict(current_user=current_user)
 
-            if (playDemoButton && demoVideoContainer && demoPlaceholderImage && demoPlayOverlay) {
-                playDemoButton.addEventListener('click', () => {
-                    // Hide placeholder and overlay
-                    demoPlaceholderImage.style.display = 'none';
-                    demoPlayOverlay.style.display = 'none';
+# --- Web Page Routes ---
+@app.route("/")
+def landing_page():
+    """Serves the main landing page (index.html)."""
+    try: return render_template("index.html")
+    except Exception as e: print(f"Error rendering landing page: {e}"); traceback.print_exc(); return "Error loading page.", 500
 
-                    // Create and append iframe
-                    const iframe = document.createElement('iframe');
-                    iframe.setAttribute('src', `img/vid.mp4`);
-                    iframe.setAttribute('title', 'Roots In Sign Demo Video');
-                    iframe.setAttribute('frameborder', '0');
-                    iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');
-                    iframe.setAttribute('allowfullscreen', '');
-                    iframe.classList.add('absolute', 'top-0', 'left-0', 'w-full', 'h-full');
-                    demoVideoContainer.appendChild(iframe);
-                });
-            }
-            
-            // Add smooth scroll for internal links
-            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-                anchor.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    const targetId = this.getAttribute('href');
-                    const targetElement = document.querySelector(targetId);
-                    if(targetElement) {
-                        targetElement.scrollIntoView({
-                            behavior: 'smooth'
-                        });
-                    }
-                });
-            });
-            
-             // Update 'Get Started' buttons to point to '/register' route
-            const getStartedButtons = document.querySelectorAll('a[href="#"][class*="Get Started"]'); // Adjust selector if needed
-            getStartedButtons.forEach(button => {
-                 // Check if it's the hero button or CTA button based on text maybe, or add specific IDs
-                 if (button.textContent.includes("Get Started") || button.textContent.includes("Get Started Free")) {
-                      button.setAttribute('href', '/register');
-                 }
-            });
-            
-        });
-    </script>
-</body>
-</html>
---- END OF FILE index.html ---
+@app.route("/signin")
+def signin_page():
+    """Serves the sign-in page (signin.html). Redirects if already logged in."""
+    if current_user.is_authenticated: return redirect(url_for('main_app_page'))
+    try: return render_template("signin.html")
+    except Exception as e: print(f"Error rendering signin page: {e}"); traceback.print_exc(); return "Error loading page.", 500
+
+@app.route("/signup")
+def signup_page():
+    """Serves the sign-up page (signup.html). Redirects if already logged in."""
+    if current_user.is_authenticated: return redirect(url_for('main_app_page'))
+    try: return render_template("signup.html")
+    except Exception as e: print(f"Error rendering signup page: {e}"); traceback.print_exc(); return "Error loading page.", 500
+
+@app.route("/register")
+def register_page():
+    """Redirects /register to the signup page for consistency."""
+    return redirect(url_for('signup_page'))
+
+@app.route("/app")
+@login_required # User MUST be logged in to access this page
+def main_app_page():
+    """Serves the main Sign 2 Speak application page (app.html). Requires login."""
+    try: return render_template("app.html")
+    except Exception as e: print(f"Error rendering main app page: {e}"); traceback.print_exc(); return "Error loading application.", 500
+
+# --- API Routes ---
+
+# --- Authentication API ---
+@app.route("/api/signup", methods=['POST'])
+def api_signup():
+    """Handles user registration via API."""
+    if current_user.is_authenticated: return jsonify({"status": "error", "message": "Already logged in."}), 400
+    if not request.is_json: return jsonify({"status": "error", "message": "Request must be JSON."}), 415
+    data = request.get_json(); email = data.get('email'); password = data.get('password'); full_name = data.get('fullName')
+    if not all([email, password, full_name]): return jsonify({"status": "error", "message": "Missing email, password, or full name."}), 400
+    if len(password) < 8: return jsonify({"status": "error", "message": "Password must be at least 8 characters."}), 400
+    # Use case-insensitive query for email check
+    if User.query.filter(User.email.ilike(email)).first(): return jsonify({"status": "error", "message": "Email address already registered."}), 409
+    try: new_user = User(email=email, full_name=full_name); new_user.set_password(password); db.session.add(new_user); db.session.commit(); print(f"User registered successfully: {email}"); return jsonify({"status": "success", "message": "Account created successfully. Please sign in."}), 201
+    except Exception as e: db.session.rollback(); print(f"Error during signup: {e}"); traceback.print_exc(); return jsonify({"status": "error", "message": "Registration failed due to a server error."}), 500
+
+@app.route("/api/signin", methods=['POST'])
+def api_signin():
+    """Handles user login via API."""
+    if current_user.is_authenticated: return jsonify({"status": "error", "message": "Already logged in."}), 400
+    if not request.is_json: return jsonify({"status": "error", "message": "Request must be JSON."}), 415
+    data = request.get_json(); email = data.get('email'); password = data.get('password'); remember = data.get('rememberMe', False)
+    if not all([email, password]): return jsonify({"status": "error", "message": "Missing email or password."}), 400
+    # Use case-insensitive query for email lookup
+    user = User.query.filter(User.email.ilike(email)).first()
+    if user and user.check_password(password): login_user(user, remember=remember); print(f"User logged in successfully: {email}"); return jsonify({"status": "success", "message": "Login successful."})
+    else: print(f"Login failed for email: {email}"); return jsonify({"status": "error", "message": "Invalid email or password."}), 401
+
+@app.route("/api/logout")
+@login_required # Ensures only logged-in users can trigger logout
+def api_logout():
+    """Handles user logout via API."""
+    if current_user.is_authenticated: # Check is slightly redundant due to @login_required but good practice
+        print(f"User logging out: {current_user.email}")
+        logout_user()
+        # Redirect to sign-in page after logout
+        return redirect(url_for('signin_page'))
+    else:
+        # Should not happen if @login_required works, but handle defensively
+        return redirect(url_for('signin_page'))
+
+
+@app.route("/api/check_auth", methods=['GET'])
+def check_auth_status():
+    """Allows frontend to check if a user is logged in and get basic info."""
+    if current_user.is_authenticated: return jsonify({"isLoggedIn": True, "user": {"email": current_user.email, "fullName": current_user.full_name}})
+    else: return jsonify({"isLoggedIn": False})
+
+# --- Prediction API (Sign-to-Text) ---
+@app.route("/upload_frame", methods=['POST'])
+#@login_required # Uncomment if login is required
+def upload_frame():
+    """Handles uploading a single frame for prediction. Saves with UUID."""
+    if not request.is_json: return jsonify({"status": "error", "message": "Request must be JSON."}), 415
+    try:
+        req_token = str(uuid.uuid4())
+        data = request.get_json()
+        if not data or 'image' not in data: return jsonify({"status": "error", "message": "Missing 'image' data."}), 400
+        image_data_url = data.get('image')
+        if not isinstance(image_data_url, str) or not image_data_url.startswith('data:image/png;base64,'): return jsonify({"status": "error", "message": "Invalid image data format."}), 400
+        try: header, image_data_b64 = image_data_url.split(",", 1)
+        except ValueError: return jsonify({"status": "error", "message": "Malformed image data URL."}), 400
+        try: image_binary = base64.b64decode(image_data_b64)
+        except Exception as e: return jsonify({"status": "error", "message": f"Base64 decoding error: {e}"}), 400
+        try: image = Image.open(BytesIO(image_binary)).convert("RGB")
+        except Exception as e: return jsonify({"status": "error", "message": f"Error opening image data: {e}"}), 400
+
+        # Save temporarily with UUID in the base TMP_DIR
+        save_filename = f"captured_frame-{req_token}.png"; save_path = os.path.join(TMP_DIR, save_filename)
+        try: image.save(save_path, format="PNG")
+        except Exception as e: print(f"Error saving frame: {e}"); traceback.print_exc(); return jsonify({"status": "error", "message": f"Error saving image file: {e}"}), 500
+
+        # Return the token (UUID)
+        return jsonify({"status": "success", "message": "Frame uploaded.", "token": req_token})
+    except Exception as e: print(f"Unexpected error in /upload_frame: {e}"); traceback.print_exc(); return jsonify({"status": "error", "message": "Internal server error."}), 500
+
+
+@app.route("/predict", methods=["POST"])
+#@login_required # Uncomment if login is required
+def predict():
+    """
+    Performs prediction on an uploaded frame using its token.
+    If prediction is successful (A-Z), moves the temp file to a subdirectory
+    named after the prediction (e.g., A/) and renames it to
+    {PredictedLetter}{SequenceNumber}.png. Otherwise, deletes the temp file.
+    """
+    global loaded_model
+    if loaded_model is None: return jsonify({"status": "error", "message": "ASL Model not loaded."}), 503
+    if not request.is_json: return jsonify({"status": "error", "message": "Request must be JSON."}), 415
+
+    temp_image_path = None # Initialize to None
+    try:
+        data = request.get_json()
+        if not data or 'token' not in data: return jsonify({"status": "error", "message": "Missing 'token'."}), 400
+        image_token = data.get('token')
+        # Basic validation for UUID-like tokens
+        if not isinstance(image_token, str) or not re.match(r'^[a-f0-9\-]{36}$', image_token, re.IGNORECASE):
+            return jsonify({"status": "error", "message": "Invalid token format."}), 400
+
+        # Construct the initial temporary file path in the base TMP_DIR
+        temp_image_filename = f"captured_frame-{image_token}.png"
+        temp_image_path = os.path.join(TMP_DIR, temp_image_filename)
+
+        if not os.path.exists(temp_image_path) or not os.path.isfile(temp_image_path):
+            print(f"Pred error: File not found {temp_image_path}")
+            return jsonify({"status": "error", "message": "Image not found."}), 404
+
+        # --- Perform Prediction ---
+        landmark_data = predict_lib.get_marks(temp_image_path)
+        if landmark_data is None:
+            # No hand detected or error getting landmarks - Delete temp file
+            print(f"No landmarks detected for {temp_image_filename}. Deleting.")
+            if os.path.exists(temp_image_path):
+                try: os.remove(temp_image_path)
+                except OSError as e: print(f"Warn: Cleanup failed for {temp_image_path}: {e}")
+            return jsonify({"status": "success", "message": "No hand detected", "result": ""})
+
+        prediction_result = predict_lib._predict(landmark_data, loaded_model)
+
+        # --- Handle Renaming/Moving or Deletion ---
+        if prediction_result and 'A' <= prediction_result <= 'Z':
+            # Valid prediction - Move and Rename the file into a subdirectory
+            try:
+                # --- Create Subdirectory ---
+                target_subdir = os.path.join(TMP_DIR, prediction_result)
+                os.makedirs(target_subdir, exist_ok=True) # Create if it doesn't exist
+
+                # --- Find the next sequence number within the subdirectory ---
+                sequence_number = 1
+                # Search pattern inside the target subdirectory
+                pattern = os.path.join(target_subdir, f"{prediction_result}[0-9]*.png")
+                existing_files = glob.glob(pattern)
+                if existing_files:
+                    max_num = 0
+                    for f in existing_files:
+                        basename = os.path.basename(f)
+                        # Extract number (handle cases like A.png, A1.png, A10.png)
+                        match = re.match(rf"^{prediction_result}(\d+)\.png$", basename)
+                        if match:
+                            num = int(match.group(1))
+                            if num > max_num:
+                                max_num = num
+                    sequence_number = max_num + 1
+
+                # --- Construct New Path inside Subdirectory ---
+                new_filename = f"{prediction_result}{sequence_number}.png"
+                new_image_path = os.path.join(target_subdir, new_filename)
+
+                print(f"Moving and Renaming {temp_image_filename} to {os.path.join(prediction_result, new_filename)}")
+                os.rename(temp_image_path, new_image_path) # Move/Rename
+                temp_image_path = None # Prevent deletion of original path in finally block
+
+            except Exception as move_rename_err:
+                print(f"Error moving/renaming file {temp_image_filename}: {move_rename_err}")
+                # Fallback: Delete the original temp file if move/rename failed
+                if temp_image_path and os.path.exists(temp_image_path):
+                    try: os.remove(temp_image_path)
+                    except OSError as e: print(f"Warn: Cleanup failed for {temp_image_path} after move/rename error: {e}")
+                # Still return the prediction, but log the error
+        else:
+            # Invalid or empty prediction - Delete the original temp file
+            print(f"Invalid/Empty prediction ('{prediction_result}') for {temp_image_filename}. Deleting.")
+            if os.path.exists(temp_image_path):
+                try: os.remove(temp_image_path)
+                except OSError as e: print(f"Warn: Cleanup failed for {temp_image_path}: {e}")
+            temp_image_path = None # Prevent potential double-deletion attempt
+
+        # Return successful prediction result
+        return jsonify({"status": "success", "message": "Prediction successful", "result": prediction_result})
+
+    except Exception as e:
+        print(f"Error during prediction endpoint: {e}"); traceback.print_exc()
+        # Attempt cleanup if temp_image_path was set and still exists
+        if temp_image_path and os.path.exists(temp_image_path):
+            try: os.remove(temp_image_path)
+            except OSError as cleanup_err: print(f"Error cleaning up {temp_image_path} in exception handler: {cleanup_err}")
+        return jsonify({"status": "error", "message": "Internal prediction error."}), 500
+
+
+# --- REVISED: Spoken-to-Signed GIF Generation Stream (Using Transcription) ---
+
+def stream_process_audio_file(audio_path):
+    """
+    Generator function: Transcribes audio, loads poses based on transcribed words,
+    generates GIF preview, saves temp pose. NO VIDEO.
+    """
+    global spoken_to_signed_model
+    if spoken_to_signed_model is None:
+        yield f"data: {json.dumps({'step': 'error', 'error': 'Speech processing model not loaded.'})}\n\n"
+        if os.path.exists(audio_path):
+            try: os.remove(audio_path)
+            except OSError as e: print(f"Error removing audio file {audio_path}: {e}")
+        return
+
+    temp_pose_path = None # For the temporary concatenated pose file
+    gif_path = None # To store path for potential cleanup
+
+    try:
+        # STEP 1: Transcribe audio
+        yield f"data: {json.dumps({'step': 'info', 'message': 'Transcribing audio...'})}\n\n"
+        segments, info = spoken_to_signed_model.transcribe(audio_path, beam_size=5, language="en", condition_on_previous_text=False, vad_filter=True)
+        merged_text = " ".join([segment.text for segment in segments]).strip()
+        print("Transcribed text:", merged_text)
+        yield f"data: {json.dumps({'step': 'transcription', 'transcription': merged_text or 'No speech detected.'})}\n\n"
+
+        if not merged_text: # Handle case where transcription is empty
+             yield f"data: {json.dumps({'step': 'info', 'message': 'Skipping pose generation due to empty transcription.'})}\n\n"
+             return # Exit the generator
+
+        # --- STEP 4: Load pose files based on *transcribed* words ---
+        # Basic tokenization: split by space, convert to lowercase, remove punctuation
+        tokens = [word.lower().strip(".,!?;:") for word in merged_text.split() if word.strip(".,!?;:")]
+
+        if not tokens:
+            yield f"data: {json.dumps({'step': 'info', 'message': 'No valid words found in transcription for pose lookup.'})}\n\n"
+            return
+
+        poselist = []
+        yield f"data: {json.dumps({'step': 'info', 'message': f'Loading poses for: {" ".join(tokens)}'})}\n\n"
+        print("Loading pose files for tokens:", tokens)
+        missing_poses = [] # Keep track of missing ones
+
+        for token in tokens:
+            pose_file = os.path.join(ASL_POSE_DIR, f"{token}.pose") # Already lowercase
+            print(f"Checking for pose file at: {pose_file}")
+
+            if not os.path.isfile(pose_file):
+                error_msg = f"Pose file not found for word '{token}'" # Simplified msg
+                print(f"WARNING: {error_msg} at {pose_file}")
+                missing_poses.append(token) # Add to missing list
+                continue # Skip this token and try the next one
+            else:
+                 print(f"Pose file FOUND at: {pose_file}")
+
+            try:
+                with open(pose_file, "rb") as f: data = f.read()
+                pose = Pose.read(data)
+                poselist.append(pose)
+                print(f"Successfully loaded pose for token: '{token}'")
+            except Exception as e:
+                 error_msg = f"Error reading pose file for '{token}' ({pose_file}): {e}"
+                 print(f"ERROR: {error_msg}")
+                 # Report error for this specific file but continue
+                 yield f"data: {json.dumps({'step': 'warning', 'message': error_msg})}\n\n"
+                 # Decide if you want to stop entirely on a read error:
+                 # return
+
+        # --- Report all missing poses at the end ---
+        if missing_poses:
+            yield f"data: {json.dumps({'step': 'warning', 'message': f'Missing pose files for: {", ".join(missing_poses)}'})}\n\n"
+
+        # Check if *any* poses were successfully loaded
+        if not poselist:
+            yield f"data: {json.dumps({'step': 'error', 'error': 'No valid pose files could be loaded for the transcribed text.'})}\n\n"
+            return
+
+        # Concatenate poses
+        yield f"data: {json.dumps({'step': 'info', 'message': 'Concatenating loaded poses...'})}\n\n"
+        newpose = concatenate_poses(poselist)
+        if newpose is None: # Check if concatenation failed
+             yield f"data: {json.dumps({'step': 'error', 'error': 'Failed to concatenate poses.'})}\n\n"
+             return
+
+
+        # STEP 5: Generate a GIF preview of the pose.
+        gif_filename = f"{uuid.uuid4()}.gif"
+        gif_path = os.path.join(VIDEOS_DIR, gif_filename) # Save GIF in files/static/videos
+        try:
+            yield f"data: {json.dumps({'step': 'info', 'message': 'Generating GIF preview...'})}\n\n"
+            visualizer = PoseVisualizer(newpose)
+            visualizer.save_gif(gif_path, visualizer.draw())
+            gif_url = url_for('static', filename=f'videos/{gif_filename}', _external=False)
+            # Send GIF URL as the final successful step
+            yield f"data: {json.dumps({'step': 'pose_gif', 'gif_filename': gif_filename, 'url': gif_url})}\n\n"
+            print(f"GIF preview saved to {gif_path}")
+        except Exception as e:
+            error_msg = f"Error generating GIF: {e}"
+            print(f"ERROR: {error_msg}")
+            yield f"data: {json.dumps({'step': 'error', 'error': error_msg})}\n\n"
+            return # Stop if GIF fails
+
+        # STEP 6: Save the concatenated pose into a temporary file
+        try:
+            temp_pose_path = os.path.join(TEMP_DIR_AUDIO, f"{uuid.uuid4()}.pose")
+            with open(temp_pose_path, "wb") as f: newpose.write(f)
+            print(f"Temporary pose saved to {temp_pose_path} (will be cleaned up)")
+        except Exception as e:
+            print(f"Warning: Failed to save temporary pose file: {e}")
+            # Don't yield an error for this, just log it
+
+
+        # --- VIDEO GENERATION STEP REMOVED ---
+
+    except Exception as e:
+        print(f"Unexpected error in stream_process_audio_file: {e}"); traceback.print_exc()
+        yield f"data: {json.dumps({'step': 'error', 'error': 'An unexpected server error occurred.'})}\n\n"
+    finally:
+        # --- Cleanup ---
+        if temp_pose_path and os.path.exists(temp_pose_path):
+            try: os.remove(temp_pose_path); print(f"Cleaned up temp pose file: {temp_pose_path}")
+            except OSError as e_clean: print(f"Error cleaning up temp pose file '{temp_pose_path}': {e_clean}")
+        if os.path.exists(audio_path):
+            try: os.remove(audio_path); print(f"Cleaned up temp audio file: {audio_path}")
+            except OSError as e_clean: print(f"Error cleaning up temp audio file '{audio_path}': {e_clean}")
+
+        yield f"data: {json.dumps({'step': 'info', 'message': 'Processing finished.'})}\n\n"
+
+
+@app.route("/process", methods=["POST"])
+#@login_required
+def process_audio_for_gif(): # Renamed function
+    """
+    Receives audio, saves temporarily, and starts the SSE stream for
+    transcription and pose GIF generation based on transcribed words.
+    """
+    global spoken_to_signed_model
+    if spoken_to_signed_model is None: return jsonify({"error": "Speech processing model not loaded."}), 503
+    if "audio" not in request.files: return jsonify({"error": "No audio file provided."}), 400
+    audio_file = request.files["audio"]
+    if audio_file.filename == '': return jsonify({"error": "No selected audio file."}), 400
+
+    # Determine suffix from original filename if possible, otherwise default
+    _, suffix = os.path.splitext(audio_file.filename)
+    if not suffix: suffix = ".webm" # Default if no extension found
+
+    audio_path = None
+    try:
+        # Save audio temporarily (ensure TEMP_DIR_AUDIO exists)
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix, dir=TEMP_DIR_AUDIO) as tmp: audio_path = tmp.name
+        audio_file.save(audio_path); print(f"Temporary audio saved to: {audio_path}")
+    except Exception as e:
+         print(f"Error saving temporary audio file: {e}")
+         if audio_path and os.path.exists(audio_path):
+             try: os.remove(audio_path)
+             except Exception: pass
+         return jsonify({"error": "Failed to save audio file."}), 500
+
+    return Response(stream_with_context(stream_process_audio_file(audio_path)), mimetype="text/event-stream")
+
+# --- Main Execution ---
+if __name__ == '__main__':
+    # Instructions for running:
+    # 1. Ensure MySQL/XAMPP is running and database/user exist. Update credentials above or use ENV variables.
+    # 2. Ensure virtual environment is activated.
+    # 3. Set FLASK_APP=app.py (using Powershell: $env:FLASK_APP = "app.py" OR using bash: export FLASK_APP=app.py)
+    # 4. Run DB migrations if needed: flask db init (once), flask db migrate -m "message", flask db upgrade
+    # 5. Install dependencies: pip install -r requirements.txt (or manually install all listed imports)
+    #    Ensure ffmpeg is installed system-wide and in PATH (for whisper).
+    # 6. Ensure necessary lowercase `.pose` files exist in 'files/static/asl/' (e.g., 'hello.pose', 'world.pose')
+    # 7. Run: flask run --host=0.0.0.0 --port=5000
+    #    Use debug=True ONLY for development: flask run --host=0.0.0.0 --port=5000 --debug
+    #    For production, use a proper WSGI server like Gunicorn or uWSGI.
+    app.run(debug=False, host='0.0.0.0', port=5000) # Set debug=True for development, but False for stability
+
+# --- END OF FILE app.py ---
